@@ -1,0 +1,14 @@
+# Runtime dependencies for the NVB backend (Python 3.12).
+# Pinned for reproducible VM and container builds. Re-validate with
+# `pip-audit -r requirements.txt` before every demo build.
+fastapi==0.115.12
+starlette==0.46.2
+uvicorn[standard]==0.34.2
+SQLAlchemy==2.0.41
+alembic==1.16.1
+psycopg[binary]==3.2.9
+pydantic==2.11.5
+pydantic-settings==2.9.1
+argon2-cffi==23.1.0
+prometheus-client==0.22.0
+httpx==0.28.1

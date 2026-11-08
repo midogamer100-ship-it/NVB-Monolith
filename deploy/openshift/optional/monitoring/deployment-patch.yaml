@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nvb-app
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          env:
+            - name: NVB_PROMETHEUS_URL
+              value: https://thanos-querier.openshift-monitoring.svc:9092
+            - name: NVB_PROMETHEUS_TOKEN_FILE
+              value: /var/run/nvb-monitoring/token
+            - name: NVB_PROMETHEUS_CA_FILE
+              value: /var/run/nvb-monitoring/service-ca.crt
+            - name: NVB_PROMETHEUS_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: NVB_PROMETHEUS_DEPLOYMENT
+              value: nvb-app
+          volumeMounts:
+            - name: metrics-reader-token
+              mountPath: /var/run/nvb-monitoring
+              readOnly: true
+      volumes:
+        - name: metrics-reader-token
+          secret:
+            secretName: nvb-metrics-reader-token
+            items:
+              - key: token
+                path: token
+              # service-ca.crt is injected into SA token secrets on OpenShift.
+              - key: service-ca.crt
+                path: service-ca.crt

@@ -1,0 +1,35 @@
+# Comparison run: exactly ONE replica, no HPA, no PDB (a PDB with
+# minAvailable: 1 on a single pod would block node drains).
+#   oc apply -k deploy/openshift/overlays/single-replica -n <namespace>
+# Switching from demo-hpa: `oc apply` does not prune, so delete the HPA first:
+#   oc delete hpa nvb-app -n <namespace> --ignore-not-found
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+images:
+  - name: nvb-app
+    newName: image-registry.openshift-image-registry.svc:5000/nvb/nvb-app
+    newTag: "1.0.0"
+
+patches:
+  - path: delete-hpa.yaml
+  - path: delete-pdb.yaml
+  - target:
+      kind: Deployment
+      name: nvb-app
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  # The single-replica run is the baseline for the CPU scaling comparison, so it
+  # enables the same synthetic workload as overlays/scaling-demo.
+  - target:
+      kind: ConfigMap
+      name: nvb-config
+    patch: |-
+      - op: replace
+        path: /data/NVB_DEMO_WORKLOAD_ENABLED
+        value: "true"

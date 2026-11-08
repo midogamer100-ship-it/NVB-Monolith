@@ -1,0 +1,19 @@
+# Egress from the app pods to the Thanos Querier tenancy port (ops page only).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nvb-allow-thanos-egress
+spec:
+  podSelector:
+    matchLabels:
+      app: nvb-app
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-monitoring
+      ports:
+        - protocol: TCP
+          port: 9092

@@ -1,0 +1,24 @@
+# HTTPS Route, TLS terminated at the OpenShift router with the cluster's
+# default ingress certificate. Plain HTTP is redirected to HTTPS.
+# Leave spec.host empty to get the default <name>-<namespace>.<apps-domain>.
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: nvb-app
+  annotations:
+    # Round-robin makes the per-pod distribution visible during the demo
+    # (sessions live in PostgreSQL, so no sticky sessions are needed).
+    haproxy.router.openshift.io/balance: roundrobin
+    haproxy.router.openshift.io/disable_cookies: "true"
+    haproxy.router.openshift.io/timeout: 30s
+spec:
+  to:
+    kind: Service
+    name: nvb-app
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

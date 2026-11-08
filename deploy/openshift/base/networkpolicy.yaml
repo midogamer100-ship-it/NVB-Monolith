@@ -1,0 +1,124 @@
+# NetworkPolicies for the NVB application namespace.
+#
+# Allowances (everything else is denied):
+#   INGRESS
+#     1. OpenShift router (openshift-ingress)  -> app pods :8080   (the HTTPS Route)
+#     2. User-workload Prometheus              -> app pods :8080   (/metrics, token protected)
+#     Kubelet health probes come from the node and are not subject to these
+#     policies on OVN-Kubernetes.
+#   EGRESS (pods labelled nvb.demo/db-client=true: the app and the migrate/seed Jobs)
+#     3. Cluster DNS (openshift-dns) on 5353 and 53, UDP+TCP
+#     4. PostgreSQL :5432 on the migrated VM (virt-launcher pod in the VM namespace)
+#
+# Adjust the VM namespace/name in 04 to match your migrated VM. If PostgreSQL is
+# reached on a secondary network (bridge/localnet), replace the selector with
+# an ipBlock for the VM's address - see docs/OPENSHIFT_DEPLOYMENT.md.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nvb-default-deny
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nvb-allow-from-router
+spec:
+  podSelector:
+    matchLabels:
+      app: nvb-app
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        # OVN-Kubernetes / OpenShift 4.x policy-group label on the ingress namespace
+        - namespaceSelector:
+            matchLabels:
+              policy-group.network.openshift.io/ingress: ""
+        # Legacy label used by OpenShift SDN clusters
+        - namespaceSelector:
+            matchLabels:
+              network.openshift.io/policy-group: ingress
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nvb-allow-from-monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app: nvb-app
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-user-workload-monitoring
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nvb-allow-dns-egress
+spec:
+  podSelector:
+    matchLabels:
+      nvb.demo/db-client: "true"
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-dns
+      ports:
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nvb-allow-postgres-egress
+spec:
+  podSelector:
+    matchLabels:
+      nvb.demo/db-client: "true"
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        # The migrated VM runs inside a virt-launcher pod labelled with the VM name.
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: nvb-vm
+          podSelector:
+            matchLabels:
+              vm.kubevirt.io/name: nvb-vm
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Alternative when the VM is on a secondary/bridged network - replace the
+    # rule above with:
+    # - to:
+    #     - ipBlock:
+    #         cidr: 192.0.2.50/32
+    #   ports:
+    #     - protocol: TCP
+    #       port: 5432

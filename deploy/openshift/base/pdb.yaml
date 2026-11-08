@@ -1,0 +1,12 @@
+# Keep at least one pod serving during voluntary disruptions (node drains,
+# cluster upgrades). With the single-replica overlay this would block drains,
+# so that overlay deletes the PDB.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nvb-app
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: nvb-app

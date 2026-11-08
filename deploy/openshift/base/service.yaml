@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nvb-app
+  labels:
+    app: nvb-app
+spec:
+  type: ClusterIP
+  selector:
+    app: nvb-app
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP

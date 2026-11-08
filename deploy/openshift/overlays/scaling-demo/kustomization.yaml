@@ -1,0 +1,26 @@
+# Isolated scaling demo: HPA (2-6 replicas) + the synthetic statement-analysis
+# CPU workload enabled. Use only in an isolated demo namespace; the workload
+# endpoint is restricted to the `demo` role and bounded server-side.
+#   oc apply -k deploy/openshift/overlays/scaling-demo -n <namespace>
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+images:
+  - name: nvb-app
+    newName: image-registry.openshift-image-registry.svc:5000/nvb/nvb-app
+    newTag: "1.0.0"
+
+patches:
+  - target:
+      kind: ConfigMap
+      name: nvb-config
+    patch: |-
+      - op: replace
+        path: /data/NVB_DEMO_WORKLOAD_ENABLED
+        value: "true"
+      - op: replace
+        path: /data/NVB_ENVIRONMENT_LABEL
+        value: "OpenShift Containers (scaling demo)"

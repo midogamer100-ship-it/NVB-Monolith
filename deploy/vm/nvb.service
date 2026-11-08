@@ -1,0 +1,61 @@
+# /etc/systemd/system/nvb.service
+# Nova Valley Bank demo application (synthetic data only) on a RHEL 9-compatible VM.
+[Unit]
+Description=Nova Valley Bank demo application (NVB)
+Documentation=file:///opt/nvb/docs/VM_DEPLOYMENT.md
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=nvb
+Group=nvb
+WorkingDirectory=/opt/nvb/backend
+EnvironmentFile=/etc/nvb/nvb.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+# Two uvicorn worker processes for the 2 vCPU baseline VM. Prometheus
+# multiprocess mode aggregates metrics from all workers.
+Environment=WEB_CONCURRENCY=2
+Environment=PROMETHEUS_MULTIPROC_DIR=/run/nvb/prometheus
+RuntimeDirectory=nvb
+RuntimeDirectoryMode=0750
+# Stale multiprocess metric files from a previous run must be removed.
+ExecStartPre=/bin/sh -c 'rm -rf /run/nvb/prometheus && mkdir -p /run/nvb/prometheus'
+ExecStart=/opt/nvb/venv/bin/uvicorn --factory app.main:app_factory \
+    --host 127.0.0.1 --port 8080 \
+    --proxy-headers --forwarded-allow-ips=127.0.0.1 \
+    --workers ${WEB_CONCURRENCY} --no-server-header
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=30
+KillSignal=SIGTERM
+
+# --- Hardening ---------------------------------------------------------------
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=no
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+UMask=0027
+# Only the runtime dir (/run/nvb) is writable; app code and venv are read-only.
+ReadWritePaths=/run/nvb
+LimitNOFILE=8192
+
+[Install]
+WantedBy=multi-user.target

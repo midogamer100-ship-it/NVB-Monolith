@@ -1,0 +1,29 @@
+# OPTIONAL component - verify against your OpenShift version before use.
+#
+# Adds:
+#   * ServiceMonitor so user-workload monitoring scrapes /metrics (bearer token).
+#   * A separate read-only ServiceAccount `nvb-metrics-reader` with the `view`
+#     ClusterRole bound ONLY in this namespace, used solely to query the Thanos
+#     Querier tenancy port so the ops page can show real cluster-wide request
+#     rate, p95 latency, error rate and available replicas.
+#   * Patches the Deployment to mount that token and point NVB_PROMETHEUS_URL at
+#     https://thanos-querier.openshift-monitoring.svc:9092.
+#   * An egress NetworkPolicy to the Thanos Querier.
+#
+# Prerequisites: user-workload monitoring enabled
+#   (cluster-monitoring-config: enableUserWorkload: true) by a cluster admin.
+#
+# Use it from an overlay:
+#   components:
+#     - ../../optional/monitoring
+# and set NVB_PROMETHEUS_NAMESPACE (patch below) to your namespace.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - servicemonitor.yaml
+  - metrics-reader.yaml
+  - networkpolicy-thanos.yaml
+
+patches:
+  - path: deployment-patch.yaml

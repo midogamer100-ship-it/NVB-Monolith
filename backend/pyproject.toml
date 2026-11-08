@@ -1,0 +1,10 @@
+[project]
+name = "nvb-backend"
+version = "1.0.0"
+description = "Nova Valley Bank (NVB) modernization demo backend - synthetic data only"
+requires-python = ">=3.12,<3.13"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]

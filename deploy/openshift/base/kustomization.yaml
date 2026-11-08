@@ -1,0 +1,23 @@
+# NVB base manifests (namespace-agnostic). Apply through an overlay:
+#   oc apply -k deploy/openshift/overlays/demo-hpa -n <namespace>
+# The Secret is NOT part of this kustomization - create it yourself
+# (see secret.example.yaml). DB migrations are a separate explicit Job
+# (deploy/openshift/jobs/db-migrate-job.yaml).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+labels:
+  - pairs:
+      app.kubernetes.io/name: nvb
+      app.kubernetes.io/part-of: nvb-demo
+    includeSelectors: false
+
+resources:
+  - serviceaccount.yaml
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+  - route.yaml
+  - hpa.yaml
+  - pdb.yaml
+  - networkpolicy.yaml

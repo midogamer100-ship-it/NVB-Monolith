@@ -1,0 +1,93 @@
+# Local development / demo environment: NVB app + PostgreSQL 16.
+# Written for `docker compose` (v2) and `podman compose`. Older podman-compose
+# releases ignore `depends_on.condition`; if so, run `podman compose run --rm migrate`
+# before `podman compose up -d app`.
+#
+# 1. cp deploy/compose/env.compose.example .env   (then set your OWN local passwords)
+# 2. docker compose up -d --build                 (db -> migrate (one-shot) -> app)
+# 3. Seed once. Either set NVB_SEED_*_PASSWORD in .env and run
+#      docker compose run --rm app python -m app.cli seed
+#    or let the seed generate passwords and show you the credentials file:
+#      docker compose run --rm app sh -c 'python -m app.cli seed --credentials-file /tmp/creds.txt && cat /tmp/creds.txt'
+# 4. open http://localhost:8080
+#
+# Nothing here contains a real password: every secret is read from your local
+# .env file and compose refuses to start if one is missing.
+
+name: nvb
+
+x-app-env: &app-env
+  NVB_ENVIRONMENT_LABEL: "Local Compose"
+  NVB_DB_HOST: db
+  NVB_DB_PORT: "5432"
+  NVB_DB_NAME: nvb
+  NVB_DB_USER: nvb_app
+  NVB_DB_PASSWORD: ${NVB_APP_DB_PASSWORD:?set NVB_APP_DB_PASSWORD in .env}
+  NVB_DB_SSLMODE: disable
+  NVB_DB_MIGRATION_USER: nvb_owner
+  NVB_DB_MIGRATION_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+  NVB_COOKIE_SECURE: "false"          # plain http on localhost only
+  NVB_METRICS_TOKEN: ${NVB_METRICS_TOKEN:?set NVB_METRICS_TOKEN in .env}
+  NVB_DEMO_WORKLOAD_ENABLED: ${NVB_DEMO_WORKLOAD_ENABLED:-false}
+  NVB_SEED_CUSTOMER_PASSWORD: ${NVB_SEED_CUSTOMER_PASSWORD:-}
+  NVB_SEED_LOADTEST_PASSWORD: ${NVB_SEED_LOADTEST_PASSWORD:-}
+  NVB_SEED_DEMO_PASSWORD: ${NVB_SEED_DEMO_PASSWORD:-}
+  NVB_SEED_ADMIN_PASSWORD: ${NVB_SEED_ADMIN_PASSWORD:-}
+  NVB_ALLOW_DEMO_RESET: ${NVB_ALLOW_DEMO_RESET:-false}
+  NVB_LOG_LEVEL: INFO
+  WEB_CONCURRENCY: "1"
+
+services:
+  db:
+    image: docker.io/library/postgres:16-alpine
+    environment:
+      POSTGRES_DB: nvb
+      POSTGRES_USER: nvb_owner
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      NVB_APP_DB_PASSWORD: ${NVB_APP_DB_PASSWORD:?set NVB_APP_DB_PASSWORD in .env}
+    volumes:
+      - nvb-pgdata:/var/lib/postgresql/data
+      - ./deploy/compose/init-nvb-app.sh:/docker-entrypoint-initdb.d/10-init-nvb-app.sh:ro,z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nvb_owner -d nvb"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "127.0.0.1:5432:5432"   # loopback only, for psql from the host
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: localhost/nvb-app:dev
+    command: ["python", "-m", "app.cli", "migrate"]
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: "no"
+
+  app:
+    image: localhost/nvb-app:dev
+    environment: *app-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+volumes:
+  nvb-pgdata:

@@ -1,0 +1,17 @@
+# Add ABOVE the default rules in /var/lib/pgsql/data/pg_hba.conf, then
+#   sudo systemctl reload postgresql
+#
+# TYPE   DATABASE  USER                 ADDRESS          METHOD
+local    nvb       nvb_owner,nvb_app                     scram-sha-256
+host     nvb       nvb_owner,nvb_app    127.0.0.1/32     scram-sha-256
+host     nvb       nvb_owner,nvb_app    ::1/128          scram-sha-256
+
+# AFTER migration to OpenShift Virtualization, when the containerised app
+# connects to this database, allow the cluster's pod network (or the specific
+# egress IP / node subnet your cluster uses) and require TLS:
+# hostssl nvb      nvb_app              10.128.0.0/14    scram-sha-256
+#
+# and in postgresql.conf:
+#   listen_addresses = 'localhost,<vm-ip>'
+#   password_encryption = scram-sha-256
+#   ssl = on   (with ssl_cert_file / ssl_key_file)

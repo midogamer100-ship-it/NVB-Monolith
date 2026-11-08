@@ -1,0 +1,29 @@
+# Read-only identity for querying the Thanos Querier tenancy port (9092), which
+# authorises the caller for the namespace passed in the `namespace` parameter.
+# It is NOT the app's own ServiceAccount, and the app never calls the Kube API.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nvb-metrics-reader
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: nvb-metrics-reader-view
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+  - kind: ServiceAccount
+    name: nvb-metrics-reader
+---
+# Long-lived token for the reader SA, mounted read-only into the app pods.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: nvb-metrics-reader-token
+  annotations:
+    kubernetes.io/service-account.name: nvb-metrics-reader
+type: kubernetes.io/service-account-token

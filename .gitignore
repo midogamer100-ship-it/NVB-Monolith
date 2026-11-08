@@ -1,0 +1,32 @@
+# Secrets and generated credentials - never commit
+.env
+*.env
+!.env.example
+!deploy/vm/nvb.env.example
+*credentials*.txt
+deploy/openshift/secret.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.db
+*.db-wal
+*.db-shm
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+backend/app/static/
+
+# Load-test output
+loadtest/results/*.json
+loadtest/results/*.html
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

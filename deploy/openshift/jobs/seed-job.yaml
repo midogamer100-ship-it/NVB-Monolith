@@ -1,0 +1,66 @@
+# One-off deterministic synthetic seed. Usually NOT needed on OpenShift: when the
+# containers use PostgreSQL on the migrated VM, that database was already seeded
+# on the VMware VM and its data migrated with the VM.
+#
+# Use it only against an EMPTY database. The seed refuses if data exists.
+# Put NVB_SEED_*_PASSWORD values into the nvb-migration-secrets Secret first;
+# otherwise generated passwords would be written only to the Job's ephemeral
+# /tmp and lost (they are deliberately never logged).
+#
+#   sed "s|NVB_IMAGE|${IMAGE}|" deploy/openshift/jobs/seed-job.yaml | oc create -n <ns> -f -
+#   oc wait --for=condition=complete job/nvb-db-seed -n <ns> --timeout=600s
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nvb-db-seed
+  labels:
+    app.kubernetes.io/name: nvb
+    app.kubernetes.io/component: db-seed
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 900
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nvb
+        app.kubernetes.io/component: db-seed
+        nvb.demo/db-client: "true"
+    spec:
+      restartPolicy: Never
+      serviceAccountName: nvb-app
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: seed
+          image: NVB_IMAGE
+          command: ["python", "-m", "app.cli", "seed", "--credentials-file", "/tmp/demo-credentials.txt"]
+          envFrom:
+            - configMapRef:
+                name: nvb-config
+            - secretRef:
+                name: nvb-secrets
+            - secretRef:
+                name: nvb-migration-secrets
+          resources:
+            requests:
+              cpu: 500m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

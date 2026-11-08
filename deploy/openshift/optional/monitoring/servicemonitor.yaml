@@ -1,0 +1,20 @@
+# Scrapes /metrics with the same bearer token the app expects (NVB_METRICS_TOKEN
+# key of the nvb-secrets Secret). Requires user-workload monitoring.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nvb-app
+spec:
+  selector:
+    matchLabels:
+      app: nvb-app
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scheme: http
+      authorization:
+        type: Bearer
+        credentials:
+          name: nvb-secrets
+          key: NVB_METRICS_TOKEN

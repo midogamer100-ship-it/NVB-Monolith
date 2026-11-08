@@ -1,0 +1,13 @@
+# Default overlay: 2-6 replicas with the CPU-based HPA.
+#   oc apply -k deploy/openshift/overlays/demo-hpa -n <namespace>
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+images:
+  - name: nvb-app
+    # Set to the image you pushed, e.g. the internal registry:
+    newName: image-registry.openshift-image-registry.svc:5000/nvb/nvb-app
+    newTag: "1.0.0"

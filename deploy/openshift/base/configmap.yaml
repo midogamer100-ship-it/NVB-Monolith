@@ -1,0 +1,33 @@
+# Non-secret configuration. Every key maps to an NVB_* setting in backend/app/config.py.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nvb-config
+data:
+  NVB_ENVIRONMENT_LABEL: "OpenShift Containers"
+  # PostgreSQL still runs on the migrated VM (OpenShift Virtualization).
+  # Set this to a Service that fronts the VM (recommended), e.g. created with
+  #   virtctl expose vmi nvb-vm --name nvb-postgres --port 5432 --target-port 5432 -n <vm-namespace>
+  # giving nvb-postgres.<vm-namespace>.svc.cluster.local, or to the VM's IP if
+  # it is attached to a secondary (bridged/localnet) network.
+  NVB_DB_HOST: "nvb-postgres.nvb-vm.svc.cluster.local"
+  NVB_DB_PORT: "5432"
+  NVB_DB_NAME: "nvb"
+  NVB_DB_USER: "nvb_app"
+  NVB_DB_SSLMODE: "prefer"
+  # Pool sizing: (5 + 5) x 6 replicas = 60 connections maximum from the pods.
+  # See docs/OPENSHIFT_DEPLOYMENT.md "Connection-pool sizing".
+  NVB_DB_POOL_SIZE: "5"
+  NVB_DB_MAX_OVERFLOW: "5"
+  NVB_DB_POOL_TIMEOUT_SECONDS: "5"
+  NVB_DB_CONNECT_TIMEOUT_SECONDS: "3"
+  NVB_DB_STATEMENT_TIMEOUT_MS: "10000"
+  NVB_COOKIE_SECURE: "true"
+  NVB_LOG_LEVEL: "INFO"
+  NVB_DEMO_WORKLOAD_ENABLED: "false"
+  NVB_DEMO_WORKLOAD_MAX_CONCURRENCY: "2"
+  NVB_DEMO_WORKLOAD_SIMULATIONS: "3000"
+  NVB_DEMO_WORKLOAD_MAX_SECONDS: "5"
+  # One uvicorn process per pod: the 1-core CPU limit and the GIL make extra
+  # workers pointless; scale with replicas (HPA) instead.
+  WEB_CONCURRENCY: "1"
