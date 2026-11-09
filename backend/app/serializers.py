@@ -14,6 +14,7 @@ TXN_TYPES = (
     "card_purchase",
     "bill_payment",
     "atm_withdrawal",
+    "withdrawal",
 )
 
 

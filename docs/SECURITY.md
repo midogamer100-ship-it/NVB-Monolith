@@ -22,6 +22,9 @@ independently assessed.
 | Headers | CSP, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS when secure cookies are on, `Cache-Control: no-store` on API | `app/main.py` |
 | Metrics / admin | `/metrics` needs a bearer token; nginx denies it externally on the VM; NetworkPolicy limits it to the monitoring namespace on OpenShift; ops APIs require the admin role; interactive API docs disabled | `app/api/health.py`, `deploy/` |
 | Demo workload | Disabled by default; route not registered unless enabled; demo role only; bounded inputs, concurrency and execution time | `app/api/demo.py`, `app/services/workload.py` |
+| Sign-up | Server-side username/password/profile rules (password ≥ 10 chars, letter + digit, not containing the username), DB-backed per-IP rate limit, can be disabled (`NVB_SELF_REGISTRATION_ENABLED`) | `app/validation.py`, `app/api/auth.py` |
+| Password reset | Identical response whether or not the user exists; silent per-user/per-IP throttle; random single-use tokens, only SHA-256 stored, short expiry, older tokens invalidated, all sessions ended and lockout cleared on reset | `app/services/onboarding.py`, `app/api/auth.py` |
+| Cash operations | Same guarantees as transfers: integer minor units, row lock, conditional debit, CHECK constraint, idempotency keys, per-operation limits, ownership checks | `app/services/cash.py`, `app/api/cash.py` |
 | Audit | `audit_events` for login success/failure/throttle, logout, transfers (completed/failed/rejected), CSV export, profile changes (field names only), admin unlock, seed and reset | `app/audit.py` |
 | Logging | JSON logs with request IDs; no passwords, tokens, cookies or full account numbers; sensitive keys redacted defensively | `app/logging_config.py` |
 | Containers | Non-root, arbitrary UID, read-only root FS, drop ALL capabilities, no privilege escalation, seccomp RuntimeDefault, no SA token mounted, no RBAC needed | `Containerfile`, `deploy/openshift/base/` |
@@ -47,6 +50,8 @@ report known CVEs. Upgrade, re-run the test suite, rebuild.
 
 ## Known limitations (acceptable for a demo, not for production)
 
+* The **demo mailbox** lets the admin read password-reset and account-setup links, so an admin
+  can take over any account. It stands in for an email provider and must never exist in a real system.
 * No MFA, no password reset, no account lockout notifications.
 * Login throttling is counter-based in PostgreSQL — fine for a demo, not a WAF.
 * No field-level encryption; PostgreSQL TLS is `prefer` by default on the VM — set

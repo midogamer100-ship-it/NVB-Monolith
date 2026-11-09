@@ -63,6 +63,14 @@ class Settings(BaseSettings):
     argon2_parallelism: int = Field(default=1, ge=1, le=8)
     max_transfer_minor: int = Field(default=50_000_000, ge=100)  # 500,000.00 EGP
 
+    # --- Sign-up, password reset, cash operations ----------------------------------
+    self_registration_enabled: bool = True
+    registration_max_per_ip_per_hour: int = Field(default=10, ge=1, le=10000)
+    password_reset_ttl_minutes: int = Field(default=15, ge=1, le=1440)
+    account_setup_ttl_hours: int = Field(default=24, ge=1, le=720)
+    max_deposit_minor: int = Field(default=10_000_000, ge=100)      # 100,000.00 EGP
+    max_withdrawal_minor: int = Field(default=5_000_000, ge=100)    # 50,000.00 EGP
+
     # --- Observability -------------------------------------------------------------
     log_level: str = "INFO"
     metrics_token: str | None = None  # if set, /metrics requires "Authorization: Bearer <token>"

@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import audit
@@ -13,14 +16,20 @@ from app.db import as_utc, utcnow
 from app.deps import AuthContext, get_auth, get_db, get_settings_dep
 from app.metrics import LOGINS
 from app.models import User
+from app.money import format_minor, mask_account_number
 from app.security import (
     SESSION_COOKIE,
+    attempt_count,
     clear_login_failures,
     create_session,
+    delete_user_sessions,
     destroy_session,
     is_login_throttled,
+    record_attempt,
     record_login_failure,
 )
+from app.services.onboarding import UsernameTaken, create_customer_user, find_valid_token, issue_token
+from app.validation import ForgotPasswordRequest, RegisterRequest, ResetPasswordRequest, check_password
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -132,3 +141,112 @@ def logout(
 @router.get("/me")
 def me(auth: AuthContext = Depends(get_auth), settings: Settings = Depends(get_settings_dep)):
     return session_payload(auth.user, auth.session.csrf_token, auth.session.expires_at, settings)
+
+
+# --- Self sign-up, forgot password, reset password ----------------------------------
+
+FORGOT_MESSAGE = "If that account exists, we've sent password reset instructions to its registered email."
+RESET_WINDOW = timedelta(minutes=15)
+
+
+def new_customer_payload(created, message: str) -> dict:
+    acct = created.account
+    return {
+        "username": created.user.username,
+        "customer_number": created.customer.customer_number,
+        "account": {"masked_number": mask_account_number(acct.account_number), "type": acct.account_type,
+                    "nickname": acct.nickname, "balance": format_minor(acct.balance_minor)},
+        "message": message,
+    }
+
+
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+def register(
+    body: RegisterRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings_dep),
+):
+    if not settings.self_registration_enabled:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Not found.")
+    ip = audit.client_ip(request) or "unknown"
+    if attempt_count(db, "reg", ip, timedelta(hours=1)) >= settings.registration_max_per_ip_per_hour:
+        audit.record(db, "auth.register", "throttled", request=request)
+        db.commit()
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many sign-up attempts. Please try again later.")
+    record_attempt(db, "reg", ip)
+    db.commit()
+    passwords = request.app.state.passwords
+    try:
+        created = create_customer_user(
+            db, username=body.username, password_hash=passwords.hash(body.password), full_name=body.full_name,
+            email=body.email, phone=body.phone, city=body.city,
+        )
+    except UsernameTaken:
+        db.rollback()
+        audit.record(db, "auth.register", "duplicate", request=request)
+        db.commit()
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            {"code": "username_taken", "message": "That username is not available."}) from None
+    audit.record(db, "auth.register", "success", request=request, actor_user_id=created.user.id,
+                 actor_username=created.user.username, details={"customer_number": created.customer.customer_number})
+    try:
+        db.commit()
+    except IntegrityError:  # concurrent registration of the same username hit the unique constraint
+        db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            {"code": "username_taken", "message": "That username is not available."}) from None
+    return new_customer_payload(created, "Your account is ready. Please sign in.")
+
+
+@router.post("/password/forgot", status_code=status.HTTP_202_ACCEPTED)
+def forgot_password(
+    body: ForgotPasswordRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings_dep),
+):
+    username = body.username.strip().lower()
+    ip = audit.client_ip(request) or "unknown"
+    throttled = (attempt_count(db, "pwr_u", username, RESET_WINDOW) >= 3
+                 or attempt_count(db, "pwr_ip", ip, RESET_WINDOW) >= 20)
+    record_attempt(db, "pwr_u", username)
+    record_attempt(db, "pwr_ip", ip)
+    if throttled:
+        outcome = "throttled"
+    else:
+        user = db.scalar(select(User).where(User.username == username))
+        if user is not None and user.is_active:
+            issue_token(db, user, "password_reset", timedelta(minutes=settings.password_reset_ttl_minutes))
+            outcome = "issued"
+        else:
+            outcome = "ignored"
+    # The username is only recorded when the account exists (no enumeration via audit log).
+    audit.record(db, "auth.password_reset_requested", outcome, request=request,
+                 actor_username=username if outcome == "issued" else None)
+    db.commit()
+    return {"message": FORGOT_MESSAGE}
+
+
+@router.post("/password/reset")
+def reset_password(body: ResetPasswordRequest, request: Request, db: Session = Depends(get_db)):
+    token = find_valid_token(db, body.token)
+    if token is None:
+        audit.record(db, "auth.password_reset", "failure", request=request, details={"reason": "invalid_token"})
+        db.commit()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, {
+            "code": "invalid_or_expired_token",
+            "message": "This link is invalid or has expired. Request a new one."})
+    user = token.user
+    try:
+        check_password(body.new_password, user.username)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from None
+    user.password_hash = request.app.state.passwords.hash(body.new_password)
+    token.used_at = utcnow()
+    ended = delete_user_sessions(db, user.id)
+    clear_login_failures(db, user.username)
+    audit.record(db, "auth.password_reset", "success", request=request, actor_user_id=user.id,
+                 actor_username=user.username, details={"kind": token.kind, "sessions_ended": ended})
+    db.commit()
+    return {"message": "Your password has been updated. Please sign in."}

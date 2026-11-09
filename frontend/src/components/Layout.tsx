@@ -22,6 +22,7 @@ const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", roles: ["customer"], icon: icon("M3 12l9-8 9 8M5 10v10h5v-6h4v6h5V10") },
   { to: "/accounts", label: "Accounts", roles: ["customer"], icon: icon("M3 7h18v12H3zM3 11h18M7 15h3") },
   { to: "/transfer", label: "Transfers", roles: ["customer"], icon: icon("M4 8h13l-3-3M20 16H7l3 3") },
+  { to: "/cash", label: "Deposit & withdraw", roles: ["customer"], icon: icon("M3 7h18v10H3zM12 9.5v5M9.5 12h5M6 7V5h12v2") },
   { to: "/transactions", label: "Transactions", roles: ["customer"], icon: icon("M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01") },
   { to: "/profile", label: "Profile", roles: ["customer"], icon: icon("M12 12a4 4 0 100-8 4 4 0 000 8zM4 20a8 8 0 0116 0") },
   { to: "/operations", label: "Operations", roles: ["admin"], icon: icon("M4 19V9M10 19V5M16 19v-7M22 19H2") },

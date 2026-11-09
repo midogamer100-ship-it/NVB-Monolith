@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 
-from app.api import accounts, auth, dashboard, demo, health, ops, profile, transactions, transfers
+from app.api import accounts, auth, cash, dashboard, demo, health, ops, profile, transactions, transfers
 from app.config import Settings, get_settings
 from app.db import build_engine, build_sessionmaker
 from app.logging_config import configure_logging, request_id_var
@@ -124,7 +124,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             response.headers.setdefault("Cache-Control", "no-store")
         return response
 
-    for module in (health, auth, accounts, transactions, transfers, dashboard, profile, ops):
+    for module in (health, auth, accounts, cash, transactions, transfers, dashboard, profile, ops):
         app.include_router(module.router)
     if settings.demo_workload_enabled:
         app.include_router(demo.router)

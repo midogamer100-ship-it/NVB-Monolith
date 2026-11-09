@@ -4,6 +4,7 @@ import { api, describeError } from "../lib/api";
 import { formatDateTime, formatDuration } from "../lib/format";
 import type { AuditEvent, ClusterMetrics, OpsStatus } from "../lib/types";
 import { useApi } from "../lib/useApi";
+import { CreateUserCard, MailboxCard } from "../components/AdminUserTools";
 
 const NOT_CONFIGURED = "Not configured";
 
@@ -56,6 +57,7 @@ export default function Operations() {
   const [unlockName, setUnlockName] = useState("");
   const [unlocking, setUnlocking] = useState(false);
   const [unlockResult, setUnlockResult] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  const [mailboxKey, setMailboxKey] = useState(0);
   const { reload: reloadStatus } = status;
 
   useEffect(() => {
@@ -238,6 +240,16 @@ export default function Operations() {
             </div>
           )}
         </section>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <CreateUserCard
+          onCreated={() => {
+            setMailboxKey((k) => k + 1);
+            auditLog.reload();
+          }}
+        />
+        <MailboxCard autoRefresh={autoRefresh} refreshKey={mailboxKey} />
       </div>
     </div>
   );

@@ -131,6 +131,19 @@ between debit and credit), insufficient funds, concurrent transfers, idempotent 
 instances, health endpoints, metrics protection and label cardinality, migrations ↔ models
 consistency, deterministic seed, and synthetic-workload guards.
 
+## Sign-up, password reset, deposit & withdraw
+
+* **Create account** (login page) — self sign-up gives a new customer one EGP current account
+  with a 0.00 balance. Admins can also create users from the Operations page; those users get
+  a set-password link.
+* **Forgot password** — always answers the same way (no username enumeration). The reset link
+  goes to the **demo mailbox** on the Operations page (admin only), because the demo sends no
+  real email. Links are single-use, expire (15 min; setup links 24 h) and end all sessions.
+* **Deposit / withdraw** — simulated branch cash on your own accounts, with idempotency keys,
+  row locking and per-operation limits (100,000 / 50,000 EGP).
+
+Full API contract: [docs/ACCOUNTS_AND_CASH.md](docs/ACCOUNTS_AND_CASH.md).
+
 ## Guarded demo-data reset
 
 ```bash

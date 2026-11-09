@@ -2,19 +2,25 @@
 
 from __future__ import annotations
 
+import secrets
 import time
+from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import audit
 from app.config import Settings
 from app.db import as_utc, utcnow
 from app.deps import AuthContext, get_db, get_settings_dep, require_admin
-from app.models import AuditEvent, User
+from app.api.auth import new_customer_payload
+from app.models import AuditEvent, OutboxMessage, User
 from app.security import clear_login_failures
 from app.services.monitoring import cluster_metrics
+from app.services.onboarding import UsernameTaken, create_customer_user, issue_token
+from app.validation import NewCustomerFields
 
 router = APIRouter(prefix="/api/ops", tags=["operations"])
 
@@ -100,3 +106,52 @@ def unlock_user(
     if not exists:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found.")
     return {"username": username, "cleared_failures": cleared}
+
+
+# --- Admin-created users and the demo mailbox ---------------------------------------
+
+
+@router.post("/users", status_code=status.HTTP_201_CREATED)
+def create_user(
+    body: NewCustomerFields,
+    request: Request,
+    auth: AuthContext = Depends(require_admin),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings_dep),
+):
+    """Create a customer user without a password; a set-password link goes to the demo mailbox."""
+    unusable = request.app.state.passwords.hash(secrets.token_urlsafe(32))
+    try:
+        created = create_customer_user(db, username=body.username, password_hash=unusable,
+                                       full_name=body.full_name, email=body.email, phone=body.phone, city=body.city)
+    except UsernameTaken:
+        db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            {"code": "username_taken", "message": "That username is not available."}) from None
+    db.refresh(created.user)
+    issue_token(db, created.user, "account_setup", timedelta(hours=settings.account_setup_ttl_hours))
+    audit.record(db, "admin.create_user", "success", request=request, actor_user_id=auth.user.id,
+                 actor_username=auth.user.username,
+                 details={"target": created.user.username, "customer_number": created.customer.customer_number})
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            {"code": "username_taken", "message": "That username is not available."}) from None
+    return new_customer_payload(created, "User created. A set-password link was sent to the demo mailbox.")
+
+
+@router.get("/mailbox")
+def mailbox(
+    limit: int = Query(default=50, ge=1, le=200),
+    auth: AuthContext = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Demo-only stand-in for an email provider. Admin-readable only."""
+    rows = db.scalars(select(OutboxMessage).order_by(OutboxMessage.id.desc()).limit(limit)).all()
+    return {
+        "demo_only": True,
+        "items": [{"id": m.id, "to": m.to_address, "username": m.username, "subject": m.subject, "body": m.body,
+                   "kind": m.kind, "created_at": as_utc(m.created_at).isoformat()} for m in rows],
+    }

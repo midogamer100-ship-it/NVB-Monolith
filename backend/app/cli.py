@@ -25,9 +25,12 @@ from app.models import (
     Account,
     AuditEvent,
     Beneficiary,
+    CashOperation,
     Customer,
     LedgerEntry,
     LoginAttempt,
+    OutboxMessage,
+    PasswordResetToken,
     Transfer,
     User,
     UserSession,
@@ -114,11 +117,12 @@ def cmd_reset(args) -> int:
     try:
         if engine.dialect.name == "postgresql":
             db.execute(text(
-                "TRUNCATE ledger_entries, transfers, beneficiaries, accounts, customers, "
-                "user_sessions, login_attempts, audit_events, users RESTART IDENTITY CASCADE"))
+                "TRUNCATE ledger_entries, cash_operations, transfers, beneficiaries, accounts, customers, "
+                "password_reset_tokens, outbox_messages, user_sessions, login_attempts, audit_events, users "
+                "RESTART IDENTITY CASCADE"))
         else:
-            for model in (LedgerEntry, Transfer, Beneficiary, Account, Customer, UserSession, LoginAttempt,
-                          AuditEvent, User):
+            for model in (LedgerEntry, CashOperation, Transfer, Beneficiary, Account, Customer, PasswordResetToken,
+                          OutboxMessage, UserSession, LoginAttempt, AuditEvent, User):
                 db.execute(delete(model))
         db.commit()
         print("All demo data deleted. Re-seeding...")

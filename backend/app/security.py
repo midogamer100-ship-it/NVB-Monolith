@@ -141,3 +141,32 @@ def clear_login_failures(db: Session, username: str) -> int:
         delete(LoginAttempt).where(LoginAttempt.key_type == key_type, LoginAttempt.key_hash == key_hash)
     )
     return result.rowcount or 0
+
+
+# --- Generic shared throttles (sign-up, forgot password) ---------------------------
+
+
+def attempt_count(db: Session, key_type: str, raw_key: str, window: timedelta) -> int:
+    since = utcnow() - window
+    return db.scalar(
+        select(func.count())
+        .select_from(LoginAttempt)
+        .where(
+            LoginAttempt.key_type == key_type,
+            LoginAttempt.key_hash == _sha256(f"{key_type}:{raw_key}"),
+            LoginAttempt.attempted_at >= since,
+        )
+    ) or 0
+
+
+def record_attempt(db: Session, key_type: str, raw_key: str) -> None:
+    db.add(LoginAttempt(key_type=key_type, key_hash=_sha256(f"{key_type}:{raw_key}"), attempted_at=utcnow()))
+
+
+def delete_user_sessions(db: Session, user_id: int) -> int:
+    result = db.execute(delete(UserSession).where(UserSession.user_id == user_id))
+    return result.rowcount or 0
+
+
+def sha256_hex(value: str) -> str:
+    return _sha256(value)

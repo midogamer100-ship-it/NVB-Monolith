@@ -160,3 +160,37 @@ export interface AuditEvent {
   details: Record<string, unknown>;
   created_at: string;
 }
+
+/* --- Sign-up, password reset, cash operations, demo mailbox (docs/ACCOUNTS_AND_CASH.md) --- */
+
+export interface NewUserResult {
+  username: string;
+  customer_number: string;
+  account: { masked_number: string; type: string; nickname: string; balance: string };
+  message: string;
+}
+
+export type CashKind = "deposit" | "withdrawal";
+
+export interface CashReceipt {
+  reference: string;
+  kind: CashKind;
+  status: "completed" | "failed";
+  failure_reason?: string | null;
+  amount: string;
+  amount_minor: number;
+  description: string;
+  account: { id: number; masked_number: string; nickname: string; balance: string; balance_minor: number };
+  created_at: string;
+  message?: string;
+}
+
+export interface MailboxMessage {
+  id: number | string;
+  to: string;
+  username: string;
+  subject: string;
+  body: string;
+  kind: string;
+  created_at: string;
+}

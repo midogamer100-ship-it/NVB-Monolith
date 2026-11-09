@@ -8,7 +8,7 @@ import { titleCase } from "../lib/format";
 import type { Account, TxnPage } from "../lib/types";
 import { useApi } from "../lib/useApi";
 
-const TYPES = ["salary", "deposit", "transfer_in", "transfer_out", "card_purchase", "bill_payment", "atm_withdrawal"];
+const TYPES = ["salary", "deposit", "transfer_in", "transfer_out", "card_purchase", "bill_payment", "atm_withdrawal", "withdrawal"];
 const FILTER_KEYS = ["account_id", "type", "direction", "q", "date_from", "date_to"] as const;
 type FilterKey = (typeof FILTER_KEYS)[number];
 type Filters = Record<FilterKey, string>;

@@ -52,6 +52,9 @@ export default function Dashboard() {
             <Link to="/accounts" className="btn-secondary">
               View accounts
             </Link>
+            <Link to="/cash" className="btn-secondary">
+              Deposit / withdraw
+            </Link>
             <Link to="/transfer" className="btn-accent">
               New transfer
             </Link>

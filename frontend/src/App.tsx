@@ -6,11 +6,15 @@ import { EmptyState, LoadingBlock } from "./components/ui";
 import type { Role } from "./lib/types";
 import AccountDetail from "./pages/AccountDetail";
 import Accounts from "./pages/Accounts";
+import Cash from "./pages/Cash";
 import Dashboard from "./pages/Dashboard";
 import DemoWorkload from "./pages/DemoWorkload";
+import ForgotPassword from "./pages/ForgotPassword";
 import Login from "./pages/Login";
 import Operations from "./pages/Operations";
 import Profile from "./pages/Profile";
+import Register from "./pages/Register";
+import ResetPassword from "./pages/ResetPassword";
 import Transactions from "./pages/Transactions";
 import Transfer from "./pages/Transfer";
 
@@ -75,6 +79,10 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      {/* Public (signed-out) pages: they call their APIs with skipAuthRedirect. */}
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         element={
           <RequireAuth>
@@ -87,6 +95,7 @@ export default function App() {
         <Route path="/accounts" element={<RequireRole role="customer"><Accounts /></RequireRole>} />
         <Route path="/accounts/:id" element={<RequireRole role="customer"><AccountDetail /></RequireRole>} />
         <Route path="/transfer" element={<RequireRole role="customer"><Transfer /></RequireRole>} />
+        <Route path="/cash" element={<RequireRole role="customer"><Cash /></RequireRole>} />
         <Route path="/transactions" element={<RequireRole role="customer"><Transactions /></RequireRole>} />
         <Route path="/profile" element={<RequireRole role="customer"><Profile /></RequireRole>} />
         <Route path="/operations" element={<RequireRole role="admin"><Operations /></RequireRole>} />

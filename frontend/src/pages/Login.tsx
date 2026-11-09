@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { homePathFor, useAuth } from "../auth/AuthContext";
 import { ApiError, describeError } from "../lib/api";
 import { Alert, BrandMark, DemoLabel, Spinner } from "../components/ui";
@@ -18,6 +18,8 @@ export default function Login() {
   }
 
   const expired = params.get("expired") === "1";
+  const registered = params.get("registered") === "1";
+  const reset = params.get("reset") === "1";
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -73,6 +75,8 @@ export default function Login() {
 
           <div className="mt-6 space-y-3">
             {expired && !error && <Alert kind="info">Your session has expired. Please sign in again.</Alert>}
+            {registered && !error && <Alert kind="success">Your account has been created. Sign in with your new username and password.</Alert>}
+            {reset && !error && <Alert kind="success">Your password has been updated. Sign in with your new password.</Alert>}
             {error && <Alert kind="error">{error}</Alert>}
           </div>
 
@@ -95,9 +99,14 @@ export default function Login() {
               />
             </div>
             <div>
-              <label htmlFor="password" className="label">
-                Password
-              </label>
+              <div className="flex items-baseline justify-between">
+                <label htmlFor="password" className="label">
+                  Password
+                </label>
+                <Link to="/forgot-password" className="text-xs font-semibold text-teal-700 hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
               <input
                 id="password"
                 type="password"
@@ -120,6 +129,12 @@ export default function Login() {
               )}
             </button>
           </form>
+          <p className="mt-6 text-center text-sm text-slate-600">
+            New to Nova Valley Bank?{" "}
+            <Link to="/register" className="font-semibold text-teal-700 hover:underline">
+              Create an account
+            </Link>
+          </p>
           <p className="mt-8 text-xs leading-relaxed text-slate-500">
             Nova Valley Bank is fictitious. This environment contains synthetic data only and is not a real banking service.
           </p>

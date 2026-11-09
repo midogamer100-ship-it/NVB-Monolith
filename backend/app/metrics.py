@@ -115,3 +115,5 @@ def update_pool_metrics(engine) -> None:
     except AttributeError:
         # Non-QueuePool (e.g. SQLite in tests) does not expose these.
         pass
+
+CASH_OPERATIONS = Counter("nvb_cash_operations_total", "Deposits and withdrawals by outcome", ["kind", "outcome"])

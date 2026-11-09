@@ -18,6 +18,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -178,6 +179,68 @@ class LoginAttempt(Base):
     key_type: Mapped[str] = mapped_column(String(8), nullable=False)  # 'user' | 'ip'
     key_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     attempted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class PasswordResetToken(Base):
+    """Single-use password reset / account setup token. Only the SHA-256 is stored."""
+
+    __tablename__ = "password_reset_tokens"
+    __table_args__ = (
+        CheckConstraint("kind IN ('password_reset','account_setup')", name="ck_reset_tokens_kind"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    user: Mapped[User] = relationship()
+
+
+class OutboxMessage(Base):
+    """Demo mailbox: messages that a real system would email. Admin-readable only."""
+
+    __tablename__ = "outbox_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    username: Mapped[str] = mapped_column(String(64), nullable=False)
+    to_address: Mapped[str] = mapped_column(String(254), nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    subject: Mapped[str] = mapped_column(String(200), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, index=True)
+
+
+class CashOperation(Base):
+    """Simulated branch deposit / withdrawal with idempotency."""
+
+    __tablename__ = "cash_operations"
+    __table_args__ = (
+        UniqueConstraint("user_id", "idempotency_key", name="uq_cash_idempotency"),
+        CheckConstraint("kind IN ('deposit','withdrawal')", name="ck_cash_kind"),
+        CheckConstraint("amount_minor > 0", name="ck_cash_positive"),
+        CheckConstraint("status IN ('completed','failed')", name="ck_cash_status"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    reference: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    request_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"), nullable=False, index=True)
+    kind: Mapped[str] = mapped_column(String(12), nullable=False)
+    amount_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    description: Mapped[str] = mapped_column(String(140), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(12), nullable=False)
+    failure_reason: Mapped[str | None] = mapped_column(String(40))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    account: Mapped[Account] = relationship()
 
 
 class AuditEvent(Base):

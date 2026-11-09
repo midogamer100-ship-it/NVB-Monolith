@@ -57,6 +57,16 @@ export default function AccountDetail() {
           <Link to={`/transfer?from=${a.id}`} className="btn bg-teal-600 text-white hover:bg-teal-500">
             Transfer from this account
           </Link>
+          {a.status === "active" && (
+            <>
+              <Link to={`/cash?account=${a.id}&kind=deposit`} className="btn bg-white text-navy-900 hover:bg-navy-50">
+                Deposit
+              </Link>
+              <Link to={`/cash?account=${a.id}&kind=withdraw`} className="btn bg-white text-navy-900 hover:bg-navy-50">
+                Withdraw
+              </Link>
+            </>
+          )}
           <Link to={`/transactions?account_id=${a.id}`} className="btn bg-white/10 text-white hover:bg-white/20">
             Search &amp; export
           </Link>
