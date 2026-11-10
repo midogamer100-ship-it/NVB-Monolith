@@ -93,6 +93,23 @@ class Settings(BaseSettings):
     # core; calibrate per environment (see docs/SCALING_DEMO.md).
     demo_workload_simulations: int = Field(default=3000, ge=10, le=20000)
 
+    # --- Extension integration API (additive, DISABLED by default) -------------------
+    # When disabled the /internal/v1 router is not registered at all, so existing
+    # behaviour is unchanged. Clients authenticate with scoped bearer credentials whose
+    # SHA-256 digests (never the raw tokens) are listed in a JSON file mounted from a
+    # Secret. Several digests per client allow overlap during rotation.
+    integration_enabled: bool = False
+    integration_clients_file: str | None = None
+    integration_max_concurrent_exports: int = Field(default=2, ge=1, le=16)
+    integration_export_queue_timeout_seconds: float = Field(default=2.0, ge=0, le=30)
+    integration_max_page_size: int = Field(default=1000, ge=10, le=5000)
+    integration_max_period_days: int = Field(default=400, ge=1, le=3660)
+    # A statement period may end no later than now - settle seconds. Postings take
+    # posted_at before acquiring the account row lock, so a row with posted_at just
+    # before "now" can still commit slightly later. See docs in integration_exports.
+    integration_settle_seconds: int = Field(default=300, ge=0, le=86400)
+    integration_discovery_max_page_size: int = Field(default=500, ge=1, le=5000)
+
     # --- Static frontend -----------------------------------------------------------
     static_dir: str | None = None
 
