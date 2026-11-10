@@ -50,26 +50,20 @@ def _introspect(client, token, session_token, **extra):
 # --- Disabled by default -----------------------------------------------------------------
 
 
-def test_integration_disabled_by_default_registers_nothing(db_url, clients_file):
-    from app.db import Base
-    from app.services.seed import seed_database
-    from tests.conftest import PASSWORDS
-
+def test_integration_disabled_by_default_registers_nothing(db_url, app):
+    # ``app`` (integration enabled) created and seeded the schema; a second application
+    # instance on the same database uses the DEFAULT settings.
     settings = make_settings(db_url)  # integration_enabled defaults to False
     assert settings.integration_enabled is False
-    app = create_app(settings)
-    Base.metadata.create_all(app.state.engine)
-    db = app.state.sessionmaker()
-    seed_database(db, app.state.passwords, PASSWORDS, customer_count=2, loadtest_count=0, demo_count=0)
-    db.close()
-    c = TestClient(app)
-    assert not any(getattr(r, "path", "").startswith("/internal") for r in app.routes)
+    disabled = create_app(settings)
+    c = TestClient(disabled)
+    assert not any(getattr(r, "path", "").startswith("/internal") for r in disabled.routes)
     resp = c.post("/internal/v1/sessions/introspect", headers=bearer(TOKEN), json={"session_token": "x"})
     assert resp.status_code in (404, 405)
     # Existing behaviour preserved
     login(c, "customer001")
     assert c.get("/api/accounts").status_code == 200
-    app.state.engine.dispose()
+    disabled.state.engine.dispose()
 
 
 # --- Client authentication -----------------------------------------------------------

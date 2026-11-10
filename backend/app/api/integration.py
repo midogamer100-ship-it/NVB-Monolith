@@ -280,7 +280,8 @@ def statement_manifest(
         ix.begin_snapshot(db)
         _user, customer = ix.customer_for_subject(db, subject)
         account = ix.owned_account(db, customer, account_id)
-        manifest = ix.statement_manifest(db, customer, account, period, now=utcnow())
+        manifest = ix.statement_manifest(db, customer, account, period, now=utcnow(),
+                                         max_entries=_settings(request).integration_max_statement_entries)
         db.rollback()  # end the read-only snapshot before writing the audit row
     audit.record(db, "integration.statement_manifest", "success", request=request,
                  details={"client_id": client.client_id, "account_id": account_id,

@@ -12,7 +12,7 @@ current row is rejected. A reset that recreates a user with the same id and the
 same created_at second is still indistinguishable, so a core reset must be paired
 with an extension data reset (documented in the extension runbook).
 
-Statement dataset contract (version ``statement-v1``)
+Statement dataset contract (version ``statement-v2``)
 ---------------------------------------------------
 * Period boundaries are UTC instants, half-open: ``start <= posted_at < end``.
   This is exactly what the existing /api/transactions date filters do (UTC days).
@@ -25,13 +25,33 @@ Statement dataset contract (version ``statement-v1``)
 * The manifest is computed in one REPEATABLE READ, READ ONLY snapshot on PostgreSQL
   and includes a reconciliation check: sum(all signed entries) == accounts.balance.
 * Entries are fetched with keyset pagination (no offsets) and no row cap.
-* Consistency: postings take ``posted_at = now()`` *before* waiting for the account
-  row lock, so a transaction can commit a row whose posted_at is slightly in the
-  past. A maximum id or timestamp alone is therefore not a completeness guarantee.
-  We only serve periods with ``end <= now - settle_seconds`` (default 300 s; the
-  core's statement_timeout is 10 s), and the caller must verify that the entries
-  it received reproduce the manifest's count/totals and that the manifest's
-  ``dataset_id`` is unchanged after paging. Any mismatch means "retry later".
+* Consistency. The ledger is append-only in application code (transfers, cash, sign-up and
+  the seed only INSERT; nothing UPDATEs or DELETEs ledger rows), but that is a convention,
+  not a database constraint, and postings take ``posted_at = now()`` *before* waiting for the
+  account row lock, so a row can commit with a ``posted_at`` slightly in the past. A maximum
+  id/timestamp, a count or a sum is therefore NOT a completeness or immutability proof.
+  The contract does not rely on any of them:
+
+  1. The manifest is computed in ONE snapshot (REPEATABLE READ, READ ONLY on PostgreSQL)
+     and contains ``entries_sha256``: a SHA-256 over the canonical encoding of EVERY entry of
+     the period, in dataset order (see ``canonical_entry_line``). ``dataset_id`` covers it.
+  2. Entries are paged in separate short requests (no transaction is held between pages).
+  3. The caller recomputes the digest over the entries it received and compares it with the
+     manifest. Equality proves that the paged set is exactly the set of the manifest's
+     snapshot: any insert (including a back-dated one), update or delete of a period row
+     that became visible between the manifest and any page changes the digest.
+  4. The caller re-reads the manifest and requires the same ``dataset_id`` (the period was
+     still stable when paging finished). Any mismatch means "retry later"; a partial
+     statement is never rendered.
+
+  The result is "the period as of one core snapshot taken at ``generated_at``". It is not
+  a promise that the period can never change afterwards: a later change yields a different
+  ``dataset_id`` (and a different document) on the next generation.
+* Settlement: we only serve periods with ``end <= now - settle_seconds`` (default 300 s; the
+  core's statement_timeout is 10 s). This is an availability aid (it makes step 3/4 failures
+  rare), not the consistency mechanism.
+* Size: a manifest hashes at most ``NVB_INTEGRATION_MAX_STATEMENT_ENTRIES`` rows
+  (``dataset_too_large`` above that) and runs inside the bounded export slot.
 """
 
 from __future__ import annotations
@@ -49,7 +69,9 @@ from app.db import as_utc
 from app.models import ROLE_CUSTOMER, Account, Customer, LedgerEntry, User
 from app.money import mask_account_number
 
-DATASET_VERSION = "statement-v1"
+DATASET_VERSION = "statement-v2"
+EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
+DIGEST_BATCH = 2000
 SUBJECT_PREFIX = "nvb-user"
 
 
@@ -155,30 +177,78 @@ def _signed():
     return case((LedgerEntry.direction == "credit", LedgerEntry.amount_minor), else_=-LedgerEntry.amount_minor)
 
 
+def posted_at_micros(posted_at: datetime) -> int:
+    """Integer microseconds since the Unix epoch (exact; no float arithmetic)."""
+    return (as_utc(posted_at) - EPOCH) // timedelta(microseconds=1)
+
+
+def canonical_entry_line(*, entry_id: int, posted_at_us: int, direction: str, amount_minor: int,
+                         balance_after_minor: int, reference: str, txn_type: str, category: str,
+                         description: str, counterparty: str) -> bytes:
+    """Canonical encoding of one entry for ``entries_sha256`` (part of the contract).
+
+    A JSON array, compact separators, non-ASCII kept as UTF-8, terminated by a newline::
+
+        [entry_id, posted_at_us, direction, amount_minor, balance_after_minor,
+         reference, type, category, description, counterparty]
+
+    ``posted_at_us`` is an integer so that timestamp re-serialisation by intermediaries
+    (``+00:00`` vs ``Z``) cannot change the digest.
+    """
+    return (json.dumps([entry_id, posted_at_us, direction, amount_minor, balance_after_minor, reference,
+                        txn_type, category, description, counterparty],
+                       ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+
+
 def statement_manifest(db: Session, customer: Customer, account: Account, period: Period,
-                       *, now: datetime) -> dict:
+                       *, now: datetime, max_entries: int = 250_000) -> dict:
     acct_filter = LedgerEntry.account_id == account.id
     in_period = and_(acct_filter, LedgerEntry.posted_at >= period.start, LedgerEntry.posted_at < period.end)
 
+    count = int(db.scalar(select(func.count(LedgerEntry.id)).where(in_period)))
+    if count > max_entries:
+        raise IntegrationError(422, "dataset_too_large",
+                               f"The period has more than {max_entries} entries; request a shorter period.")
     opening = db.scalar(
         select(func.coalesce(func.sum(_signed()), 0)).where(acct_filter, LedgerEntry.posted_at < period.start)
     )
-    credit_total, debit_total, count, first_id, last_id = db.execute(
-        select(
-            func.coalesce(func.sum(case((LedgerEntry.direction == "credit", LedgerEntry.amount_minor), else_=0)), 0),
-            func.coalesce(func.sum(case((LedgerEntry.direction == "debit", LedgerEntry.amount_minor), else_=0)), 0),
-            func.count(LedgerEntry.id),
-            func.min(LedgerEntry.id),
-            func.max(LedgerEntry.id),
-        ).where(in_period)
-    ).one()
     ledger_total = db.scalar(select(func.coalesce(func.sum(_signed()), 0)).where(acct_filter))
     balance_now = db.scalar(select(Account.balance_minor).where(Account.id == account.id))
     if int(ledger_total) != int(balance_now):
         raise IntegrationError(500, "ledger_reconciliation_failed",
                                "Ledger does not reconcile with the account balance.")
 
-    opening, credit_total, debit_total = int(opening), int(credit_total), int(debit_total)
+    # One ordered pass over every entry of the period inside the same snapshot: totals and the
+    # content digest come from the rows themselves, not from independent aggregates.
+    digest = hashlib.sha256()
+    credit_total = debit_total = seen = 0
+    first_id = last_id = None
+    rows = db.execute(
+        select(LedgerEntry.id, LedgerEntry.posted_at, LedgerEntry.direction, LedgerEntry.amount_minor,
+               LedgerEntry.balance_after_minor, LedgerEntry.reference, LedgerEntry.txn_type,
+               LedgerEntry.category, LedgerEntry.description, LedgerEntry.counterparty)
+        .where(in_period).order_by(LedgerEntry.posted_at.asc(), LedgerEntry.id.asc())
+        .execution_options(yield_per=DIGEST_BATCH)
+    )
+    for r in rows:
+        seen += 1
+        if r.direction == "credit":
+            credit_total += int(r.amount_minor)
+        else:
+            debit_total += int(r.amount_minor)
+        first_id = r.id if first_id is None else min(first_id, r.id)
+        last_id = r.id if last_id is None else max(last_id, r.id)
+        digest.update(canonical_entry_line(
+            entry_id=r.id, posted_at_us=posted_at_micros(r.posted_at), direction=r.direction,
+            amount_minor=int(r.amount_minor), balance_after_minor=int(r.balance_after_minor),
+            reference=r.reference, txn_type=r.txn_type, category=r.category, description=r.description,
+            counterparty=r.counterparty))
+    if seen != count:
+        # Cannot happen inside one snapshot; fail closed rather than publish a manifest that
+        # does not describe a single consistent state (e.g. an engine without snapshot reads).
+        raise IntegrationError(500, "snapshot_inconsistent", "The export snapshot was not consistent.")
+
+    opening = int(opening)
     closing = opening + credit_total - debit_total
     opened_at = as_utc(account.opened_at)
     core = {
@@ -190,9 +260,10 @@ def statement_manifest(db: Session, customer: Customer, account: Account, period
         "closing_balance_minor": closing,
         "credit_total_minor": credit_total,
         "debit_total_minor": debit_total,
-        "entry_count": int(count),
+        "entry_count": count,
         "first_entry_id": first_id,
         "last_entry_id": last_id,
+        "entries_sha256": digest.hexdigest(),
     }
     dataset_id = hashlib.sha256(json.dumps(core, sort_keys=True).encode()).hexdigest()
     holder = customer.full_name if isinstance(customer, Customer) else None
@@ -230,6 +301,7 @@ def entry_out(e: LedgerEntry) -> dict:
     return {
         "entry_id": e.id,
         "posted_at": as_utc(e.posted_at).isoformat(),
+        "posted_at_us": posted_at_micros(e.posted_at),
         "reference": e.reference,
         "direction": e.direction,
         "type": e.txn_type,

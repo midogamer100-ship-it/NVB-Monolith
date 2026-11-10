@@ -109,6 +109,8 @@ class Settings(BaseSettings):
     # before "now" can still commit slightly later. See docs in integration_exports.
     integration_settle_seconds: int = Field(default=300, ge=0, le=86400)
     integration_discovery_max_page_size: int = Field(default=500, ge=1, le=5000)
+    # Upper bound of rows hashed by one statement manifest (bounded work per export slot).
+    integration_max_statement_entries: int = Field(default=250_000, ge=100, le=2_000_000)
 
     # --- Static frontend -----------------------------------------------------------
     static_dir: str | None = None
