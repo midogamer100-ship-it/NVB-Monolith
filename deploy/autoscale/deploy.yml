@@ -34,15 +34,20 @@
         name: nvb
         state: restarted
 
-    - name: Wait until the app answers locally
-      ansible.builtin.uri:
-        url: https://127.0.0.1/login
-        validate_certs: false
-        status_code: 200
+        - name: Wait until the app answers locally
+
+      ansible.builtin.command: curl -sk -o /dev/null -w '%{http_code}' --max-time 5 https://127.0.0.1/login
+
       register: health
-      until: health.status == 200
+
+      until: health.stdout == "200"
+
       retries: 30
+
       delay: 5
+
+      changed_when: false
+ 
 
     - name: Give HAProxy time to mark this VM UP (rise 2, inter 2s)
       ansible.builtin.pause:
