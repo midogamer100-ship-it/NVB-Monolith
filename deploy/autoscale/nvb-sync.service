@@ -1,0 +1,15 @@
+# Installed on every pool VM as /etc/systemd/system/nvb-sync.service
+# Runs once at boot, before nvb.service, and installs the newest release tag.
+[Unit]
+Description=Install the newest NVB release before the app starts
+Wants=network-online.target
+After=network-online.target cloud-init.service
+Before=nvb.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/nvb-sync.sh
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,49 @@
+# Rolling deploy of one release tag: one VM at a time, stop at the first failure.
+- name: Rolling deploy of an NVB release
+  hosts: nvb_pool
+  serial: 1
+  max_fail_percentage: 0
+  become: true
+  tasks:
+    - name: Require a release tag like v1.2.3
+      ansible.builtin.assert:
+        that:
+          - release_tag is defined
+          - release_tag is match('^v[0-9]')
+
+    - name: Install the release with the repository's install.sh
+      ansible.builtin.command: /usr/local/sbin/nvb-sync.sh {{ release_tag }}
+      register: sync
+      changed_when: "'installed v' in sync.stderr"
+
+    - name: Confirm the installed release
+      ansible.builtin.command: cat /var/lib/nvb-deploy/RELEASE
+      register: release
+      changed_when: false
+      failed_when: release.stdout != release_tag
+
+    - name: Run database migrations once, on the first VM only
+      ansible.builtin.command: /opt/nvb/scripts/nvb-admin.sh migrate
+      environment:
+        NVB_DB_MIGRATION_PASSWORD: "{{ lookup('env', 'NVB_DB_MIGRATION_PASSWORD') }}"
+      no_log: true
+      when: inventory_hostname == (ansible_play_hosts_all | first)
+
+    - name: Restart NVB
+      ansible.builtin.systemd:
+        name: nvb
+        state: restarted
+
+    - name: Wait until the app answers locally
+      ansible.builtin.uri:
+        url: https://127.0.0.1/login
+        validate_certs: false
+        status_code: 200
+      register: health
+      until: health.status == 200
+      retries: 30
+      delay: 5
+
+    - name: Give HAProxy time to mark this VM UP (rise 2, inter 2s)
+      ansible.builtin.pause:
+        seconds: 8
