@@ -128,6 +128,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.include_router(module.router)
     if settings.demo_workload_enabled:
         app.include_router(demo.router)
+    if settings.integration_enabled:
+        # Imported lazily so a disabled deployment never loads the integration code.
+        from app.api import integration
+
+        integration.configure(app, settings)
+        app.include_router(integration.router)
 
     @app.get("/api/info", tags=["meta"])
     def info():
