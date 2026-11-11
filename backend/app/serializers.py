@@ -58,7 +58,7 @@ def beneficiary_out(b: Beneficiary) -> dict:
         "nickname": b.nickname,
         "holder_name": b.account.customer.full_name,
         "masked_number": mask_account_number(b.account.account_number),
-        "bank": "Nova Valley Bank",
+        "bank": "R&D bank",
     }
 
 

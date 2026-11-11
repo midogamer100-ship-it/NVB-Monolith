@@ -62,7 +62,7 @@ services:
       context: .
       dockerfile: Containerfile
     image: localhost/nvb-app:dev
-    command: ["python", "-m", "app.cli", "migrate"]
+    command: ["/opt/app-root/nvb-venv/bin/python", "-m", "app.cli", "migrate"]
     environment: *app-env
     depends_on:
       db:

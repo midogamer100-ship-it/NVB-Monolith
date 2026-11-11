@@ -8,7 +8,7 @@ import { formatMinor, formatMinorCompact, monthLabel, titleCase } from "../lib/f
 import type { Dashboard as DashboardData } from "../lib/types";
 import { useApi } from "../lib/useApi";
 
-const CATEGORY_COLORS = ["#0f766e", "#1c386a", "#14b8a6", "#4d77bf", "#5eead4", "#7c9fd6", "#0d9488", "#2f5aa3"];
+const CATEGORY_COLORS = ["#ed1c24", "#636466", "#c00000", "#939597", "#f27c80", "#201e1d", "#bbbdbf", "#9e0000"];
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -71,7 +71,7 @@ export default function Dashboard() {
         </div>
         <div className="card p-6">
           <p className="text-sm font-medium text-slate-600">Income this month</p>
-          <p className="mt-2 text-2xl font-bold tabular-nums text-teal-700">{formatMinor(current?.income_minor ?? 0)}</p>
+          <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-700">{formatMinor(current?.income_minor ?? 0)}</p>
           <p className="mt-1 text-xs text-slate-500">Excludes transfers between your own accounts</p>
         </div>
         <div className="card p-6">
@@ -118,19 +118,19 @@ export default function Dashboard() {
           <div className="mt-4 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthly} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#475569" }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e6e5e5" />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#636466" }} axisLine={false} tickLine={false} />
                 <YAxis
-                  tick={{ fontSize: 11, fill: "#475569" }}
+                  tick={{ fontSize: 11, fill: "#636466" }}
                   axisLine={false}
                   tickLine={false}
                   width={72}
                   tickFormatter={(v: number) => formatMinorCompact(Math.round(v * 100))}
                 />
-                <Tooltip formatter={(v: number) => formatMinor(Math.round(v * 100))} cursor={{ fill: "#eef3fb" }} />
+                <Tooltip formatter={(v: number) => formatMinor(Math.round(v * 100))} cursor={{ fill: "#f3f2f2" }} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="Income" fill="#0f766e" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Spending" fill="#1c386a" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Income" fill="#201e1d" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Spending" fill="#ed1c24" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -147,8 +147,8 @@ export default function Dashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={categories} layout="vertical" margin={{ top: 0, right: 12, left: 0, bottom: 0 }}>
                   <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="name" width={96} tick={{ fontSize: 12, fill: "#334155" }} axisLine={false} tickLine={false} />
-                  <Tooltip formatter={(v: number) => formatMinor(Math.round(v * 100))} cursor={{ fill: "#eef3fb" }} />
+                  <YAxis type="category" dataKey="name" width={96} tick={{ fontSize: 12, fill: "#333234" }} axisLine={false} tickLine={false} />
+                  <Tooltip formatter={(v: number) => formatMinor(Math.round(v * 100))} cursor={{ fill: "#f3f2f2" }} />
                   <Bar dataKey="value" name="Spent" radius={[0, 4, 4, 0]}>
                     {categories.map((c, i) => (
                       <Cell key={c.name} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} />

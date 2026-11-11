@@ -55,9 +55,9 @@ export default function Login() {
           <BrandMark inverted />
         </div>
         <div className="relative max-w-md">
-          <h1 className="text-4xl font-bold leading-tight">Banking that grows with the valley.</h1>
+          <h1 className="text-4xl font-bold leading-tight">Banking, engineered to empower.</h1>
           <p className="mt-4 text-navy-200">
-            This is the Nova Valley Bank modernization demo — the same application running on a virtual machine and as containers on
+            This is the R&amp;D bank modernization demo — the same application running on a virtual machine and as containers on
             OpenShift.
           </p>
         </div>
@@ -130,13 +130,17 @@ export default function Login() {
             </button>
           </form>
           <p className="mt-6 text-center text-sm text-slate-600">
-            New to Nova Valley Bank?{" "}
+            New to R&amp;D bank?{" "}
             <Link to="/register" className="font-semibold text-teal-700 hover:underline">
               Create an account
             </Link>
           </p>
+          <div className="mt-8 flex flex-col items-center gap-2">
+            <img src="/gbg-logo-color.png" alt="Global Brands Group" className="h-10 w-auto" />
+            <p className="text-xs font-semibold uppercase tracking-wider text-navy-600">A Global Brands Group company</p>
+          </div>
           <p className="mt-8 text-xs leading-relaxed text-slate-500">
-            Nova Valley Bank is fictitious. This environment contains synthetic data only and is not a real banking service.
+            R&amp;D bank is fictitious. This environment contains synthetic data only and is not a real banking service.
           </p>
         </div>
       </section>

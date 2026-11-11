@@ -13,7 +13,7 @@ export default function TxnDetailModal({ txnId, onClose }: { txnId: number | nul
       {error && !loading && <ErrorState error={error} onRetry={reload} />}
       {data && !loading && !error && (
         <div>
-          <p className={`text-3xl font-bold tabular-nums ${data.direction === "credit" ? "text-teal-700" : "text-navy-900"}`}>
+          <p className={`text-3xl font-bold tabular-nums ${data.direction === "credit" ? "text-emerald-700" : "text-navy-900"}`}>
             {formatSignedMinor(data.signed_amount_minor)}
           </p>
           <p className="mt-1 text-sm text-slate-600">{data.description}</p>

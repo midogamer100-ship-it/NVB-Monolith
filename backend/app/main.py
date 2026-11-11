@@ -52,7 +52,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     configure_logging(settings.log_level, settings.resolved_instance_id)
 
     app = FastAPI(
-        title="Nova Valley Bank (NVB) demo API",
+        title="R&D bank demo API",
         version=settings.app_version,
         description="Synthetic data only. Demonstration system - no real banking.",
         docs_url=None,  # no public interactive docs in the demo deployment
@@ -132,7 +132,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/api/info", tags=["meta"])
     def info():
         """Public, non-sensitive metadata used by the login page footer."""
-        return {"app": "Nova Valley Bank demo", "version": settings.app_version, "synthetic_data": True}
+        return {"app": "R&D bank demo", "version": settings.app_version, "synthetic_data": True}
 
     @app.api_route("/api/{rest:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"], include_in_schema=False)
     def api_not_found(rest: str):

@@ -137,14 +137,14 @@ export default function Transfer() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <PageHeader title="Internal transfer" subtitle="Move money between Nova Valley Bank accounts. Transfers are instant and free." />
+      <PageHeader title="Internal transfer" subtitle="Move money between R&amp;D bank accounts. Transfers are instant and free." />
 
       <ol className="mb-6 flex items-center gap-2 text-xs font-semibold" aria-label="Transfer progress">
         {steps.map((s, i) => (
           <li key={s} className="flex items-center gap-2">
             <span
               className={`flex h-6 w-6 items-center justify-center rounded-full ${
-                i < stepIndex ? "bg-teal-600 text-white" : i === stepIndex ? "bg-navy-800 text-white" : "bg-slate-200 text-slate-600"
+                i < stepIndex ? "bg-emerald-600 text-white" : i === stepIndex ? "bg-navy-800 text-white" : "bg-slate-200 text-slate-600"
               }`}
               aria-current={i === stepIndex ? "step" : undefined}
             >
@@ -279,7 +279,7 @@ export default function Transfer() {
           <dl className="mt-5 divide-y divide-slate-100 text-sm">
             <Row k="From" v={`${preview.source.nickname} (${preview.source.masked_number})`} />
             <Row k="To" v={`${preview.destination.holder_name} (${preview.destination.masked_number})${preview.destination.is_own_account ? " · your account" : ""}`} />
-            <Row k="Bank" v="Nova Valley Bank (internal)" />
+            <Row k="Bank" v="R&amp;D bank (internal)" />
             <Row k="Fee" v={formatDecimal(preview.fee)} />
             <Row k="Description" v={preview.description || "—"} />
             <Row k="Balance after transfer" v={preview.balance_after ? formatDecimal(preview.balance_after) : "—"} />
@@ -317,10 +317,10 @@ export default function Transfer() {
 
       {step === "receipt" && receipt && (
         <div className="card overflow-hidden">
-          <div className={`px-6 py-6 text-center ${receipt.status === "completed" ? "bg-teal-50" : "bg-red-50"}`}>
+          <div className={`px-6 py-6 text-center ${receipt.status === "completed" ? "bg-emerald-50" : "bg-red-50"}`}>
             <div
               className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full ${
-                receipt.status === "completed" ? "bg-teal-600 text-white" : "bg-red-600 text-white"
+                receipt.status === "completed" ? "bg-emerald-600 text-white" : "bg-red-600 text-white"
               }`}
               aria-hidden="true"
             >
@@ -334,7 +334,7 @@ export default function Transfer() {
                 </svg>
               )}
             </div>
-            <h2 className={`mt-3 text-xl font-bold ${receipt.status === "completed" ? "text-teal-900" : "text-red-800"}`}>
+            <h2 className={`mt-3 text-xl font-bold ${receipt.status === "completed" ? "text-emerald-900" : "text-red-800"}`}>
               {receipt.status === "completed" ? "Transfer completed" : "Transfer not completed"}
             </h2>
             {receipt.status !== "completed" && <p className="mt-1 text-sm text-red-800">{receipt.message ?? "No money was moved."}</p>}

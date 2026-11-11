@@ -13,8 +13,8 @@ from app.db import as_utc, utcnow
 from app.models import ROLE_CUSTOMER, Account, Customer, OutboxMessage, PasswordResetToken, User
 from app.security import sha256_hex
 
-RESET_SUBJECT = "Reset your Nova Valley Bank password"
-SETUP_SUBJECT = "Set up your Nova Valley Bank sign-in"
+RESET_SUBJECT = "Reset your R&D bank password"
+SETUP_SUBJECT = "Set up your R&D bank sign-in"
 
 
 class UsernameTaken(Exception):
@@ -77,7 +77,7 @@ def issue_token(db: Session, user: User, kind: str, ttl: timedelta) -> str:
     link = f"/reset-password?token={raw}"
     if kind == "account_setup":
         subject = SETUP_SUBJECT
-        body = (f"Hello {user.username},\n\nAn account has been created for you at Nova Valley Bank (demo).\n"
+        body = (f"Hello {user.username},\n\nAn account has been created for you at R&D bank (demo).\n"
                 f"Choose your password here (valid for {int(ttl.total_seconds() // 3600)} hours):\n{link}\n\n"
                 "Synthetic demo message - no real email was sent.")
     else:
