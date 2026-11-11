@@ -57,6 +57,10 @@ function cleanMsg(msg: string): string {
 export function detailMessage(body: unknown): string | null {
   if (!body || typeof body !== "object") return null;
   const b = body as Record<string, unknown>;
+  if (b.error && typeof b.error === "object") {
+    const extensionError = b.error as Record<string, unknown>;
+    if (typeof extensionError.message === "string") return extensionError.message;
+  }
   if (typeof b.message === "string") return b.message;
   const detail = b.detail;
   if (typeof detail === "string") return detail;

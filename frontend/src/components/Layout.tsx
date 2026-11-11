@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import type { Role } from "../lib/types";
 import { BrandMark, DemoLabel } from "./ui";
+import { useDigitalAccess } from "../lib/digital";
 
 interface NavItem {
   to: string;
@@ -25,12 +26,15 @@ const NAV: NavItem[] = [
   { to: "/cash", label: "Deposit & withdraw", roles: ["customer"], icon: icon("M3 7h18v10H3zM12 9.5v5M9.5 12h5M6 7V5h12v2") },
   { to: "/transactions", label: "Transactions", roles: ["customer"], icon: icon("M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01") },
   { to: "/profile", label: "Profile", roles: ["customer"], icon: icon("M12 12a4 4 0 100-8 4 4 0 000 8zM4 20a8 8 0 0116 0") },
+  { to: "/statements", label: "Account statements", roles: ["customer"], icon: icon("M6 3h9l3 3v15H6zM9 10h6M9 14h6M9 18h4") },
+  { to: "/loans", label: "Loan applications", roles: ["customer"], icon: icon("M6 3h12v18H6zM9 8h6M9 12h6M9 16h3") },
   { to: "/operations", label: "Operations", roles: ["admin"], icon: icon("M4 19V9M10 19V5M16 19v-7M22 19H2") },
   { to: "/demo-workload", label: "Demo workload", roles: ["demo"], requiresWorkload: true, icon: icon("M13 2L4 14h7l-1 8 9-12h-7z") },
 ];
 
 export default function Layout() {
   const { session, logout } = useAuth();
+  const digital = useDigitalAccess();
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const location = useLocation();
@@ -40,6 +44,10 @@ export default function Layout() {
   if (!session) return null;
   const { user, features } = session;
   const items = NAV.filter((n) => n.roles.includes(user.role) && (!n.requiresWorkload || features.demo_workload));
+  const loanRoles = digital.identity?.extension_roles ?? [];
+  if (loanRoles.some(role => ["reviewer", "approver", "extension_admin"].includes(role))) {
+    items.push({ to: "/loan-review", label: loanRoles.some(role => ["approver", "extension_admin"].includes(role)) ? "Loan management" : "Assigned reviews", roles: [user.role], icon: icon("M5 3h14v18H5zM8 8h8M8 12l2 2 5-5M8 18h8") });
+  }
 
   const sidebar = (
     <div className="flex h-full flex-col bg-navy-900 text-navy-100">
@@ -128,6 +136,7 @@ export default function Layout() {
           Demo environment — synthetic data
         </div>
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          {digital.unavailable && <p role="status" className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Digital service permissions are temporarily unavailable. Banking pages remain accessible. Reload to retry.</p>}
           <div className="fade-in" key={location.pathname}>
             <Outlet />
           </div>

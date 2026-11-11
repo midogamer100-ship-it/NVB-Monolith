@@ -17,6 +17,7 @@ import Register from "./pages/Register";
 import ResetPassword from "./pages/ResetPassword";
 import Transactions from "./pages/Transactions";
 import Transfer from "./pages/Transfer";
+import { StatementsPage, LoansPage, LoanReviewPage } from "./pages/DigitalServices";
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { status } = useAuth();
@@ -98,6 +99,9 @@ export default function App() {
         <Route path="/cash" element={<RequireRole role="customer"><Cash /></RequireRole>} />
         <Route path="/transactions" element={<RequireRole role="customer"><Transactions /></RequireRole>} />
         <Route path="/profile" element={<RequireRole role="customer"><Profile /></RequireRole>} />
+        <Route path="/statements" element={<RequireRole role="customer"><StatementsPage /></RequireRole>} />
+        <Route path="/loans" element={<RequireRole role="customer"><LoansPage /></RequireRole>} />
+        <Route path="/loan-review" element={<LoanReviewPage />} />
         <Route path="/operations" element={<RequireRole role="admin"><Operations /></RequireRole>} />
         <Route path="/demo-workload" element={<RequireRole role="demo"><DemoWorkload /></RequireRole>} />
         <Route path="*" element={<NotFound />} />
