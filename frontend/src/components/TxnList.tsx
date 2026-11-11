@@ -35,7 +35,7 @@ export default function TxnList({ items, onSelect, showBalance = false }: { item
                   {t.counterparty && <p className="text-xs text-slate-500">{t.counterparty}</p>}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-slate-600">{titleCase(t.type)}</td>
-                <td className={`whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums ${t.direction === "credit" ? "text-teal-700" : "text-slate-900"}`}>
+                <td className={`whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums ${t.direction === "credit" ? "text-emerald-700" : "text-slate-900"}`}>
                   {formatSignedMinor(t.signed_amount_minor)}
                 </td>
                 {showBalance && (
@@ -63,7 +63,7 @@ export default function TxnList({ items, onSelect, showBalance = false }: { item
                   {formatDate(t.posted_at)} · {titleCase(t.type)}
                 </p>
               </div>
-              <span className={`shrink-0 text-sm font-semibold tabular-nums ${t.direction === "credit" ? "text-teal-700" : "text-slate-900"}`}>
+              <span className={`shrink-0 text-sm font-semibold tabular-nums ${t.direction === "credit" ? "text-emerald-700" : "text-slate-900"}`}>
                 {formatSignedMinor(t.signed_amount_minor)}
               </span>
             </button>

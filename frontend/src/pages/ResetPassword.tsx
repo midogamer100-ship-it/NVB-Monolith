@@ -65,7 +65,7 @@ export default function ResetPassword() {
   }
 
   return (
-    <AuthShell title="Choose a new password" subtitle="Set a new password for your Nova Valley Bank sign-in. All your other sessions will be signed out.">
+    <AuthShell title="Choose a new password" subtitle="Set a new password for your R&amp;D bank sign-in. All your other sessions will be signed out.">
       {error && (
         <div className="mb-4 space-y-3">
           <Alert kind="error">{error}</Alert>

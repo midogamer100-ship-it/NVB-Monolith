@@ -1,3 +1,4 @@
+import { BRAND } from "../lib/brand";
 import { useEffect, useRef, type ReactNode } from "react";
 import { describeError } from "../lib/api";
 
@@ -46,7 +47,7 @@ export function ErrorState({ error, onRetry, title = "We couldn't load this" }: 
 export function Alert({ kind, children }: { kind: "error" | "success" | "warning" | "info"; children: ReactNode }) {
   const styles = {
     error: "border-red-200 bg-red-50 text-red-800",
-    success: "border-teal-200 bg-teal-50 text-teal-900",
+    success: "border-emerald-200 bg-emerald-50 text-emerald-900",
     warning: "border-amber-200 bg-amber-50 text-amber-900",
     info: "border-navy-100 bg-navy-50 text-navy-800",
   }[kind];
@@ -160,15 +161,13 @@ export function DemoLabel({ className = "" }: { className?: string }) {
 export function BrandMark({ inverted = false }: { inverted?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
-      <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${inverted ? "bg-white text-navy-900" : "bg-navy-900 text-white"}`}>
-        <span className="text-sm font-black tracking-tight">
-          NV<span className="text-teal-500">B</span>
-        </span>
-      </div>
+      <img src="/rdbank-mark.svg" alt="" aria-hidden="true" className="h-10 w-10 shrink-0" />
       <div className="leading-tight">
-        <p className={`text-sm font-bold ${inverted ? "text-white" : "text-navy-900"}`}>Nova Valley Bank</p>
-        <p className={`text-[11px] font-medium uppercase tracking-wider ${inverted ? "text-teal-300" : "text-teal-700"}`}>Digital Banking</p>
+        <p className={`font-display text-lg font-bold leading-none ${inverted ? "text-white" : "text-navy-900"}`}>R<span className="text-teal-500">&amp;</span>D <span className="font-normal">bank</span><span className="sr-only"> ({BRAND.name})</span></p>
+        <p className={`text-[11px] font-medium mt-1 uppercase tracking-[0.18em] ${inverted ? "text-navy-300" : "text-navy-600"}`}>{BRAND.descriptor}</p>
       </div>
+      <span className={`h-8 w-px ${inverted ? "bg-white/20" : "bg-navy-200"}`} aria-hidden="true" />
+      <img src={inverted ? "/gbg-mark-white.png" : "/gbg-mark-red.png"} alt="Global Brands Group" className="h-6 w-6 object-contain" />
     </div>
   );
 }

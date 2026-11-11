@@ -87,13 +87,13 @@ export default function Register() {
   if (result) {
     return (
       <AuthShell title="Your account is ready" subtitle={result.message}>
-        <div className="rounded-xl bg-teal-50 p-5 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-teal-600 text-white" aria-hidden="true">
+        <div className="rounded-xl bg-emerald-50 p-5 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 text-white" aria-hidden="true">
             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M5 12l5 5L20 7" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
-          <p className="mt-3 text-sm text-teal-900">Welcome to Nova Valley Bank, {result.username}.</p>
+          <p className="mt-3 text-sm text-emerald-900">Welcome to R&amp;D bank, {result.username}.</p>
         </div>
         <dl className="mt-5 divide-y divide-slate-100 text-sm">
           <Row k="Username" v={result.username} />

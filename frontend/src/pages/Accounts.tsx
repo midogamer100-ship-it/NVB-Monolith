@@ -11,7 +11,7 @@ export default function Accounts() {
     <div>
       <PageHeader
         title="Accounts"
-        subtitle={data ? `Total available balance ${formatDecimal(data.total_balance)}` : "Your Nova Valley Bank accounts"}
+        subtitle={data ? `Total available balance ${formatDecimal(data.total_balance)}` : "Your R&D bank accounts"}
         actions={
           <Link to="/transfer" className="btn-accent">
             New transfer

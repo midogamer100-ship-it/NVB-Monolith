@@ -9,6 +9,11 @@
   body {
     @apply bg-slate-50 text-slate-900;
   }
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
   :focus-visible {
     @apply outline-none ring-2 ring-teal-500 ring-offset-2;
   }
@@ -22,10 +27,10 @@
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60;
   }
   .btn-primary {
-    @apply btn bg-navy-800 text-white hover:bg-navy-700;
+    @apply btn bg-teal-700 text-white hover:bg-teal-800;
   }
   .btn-accent {
-    @apply btn bg-teal-700 text-white hover:bg-teal-800;
+    @apply btn bg-navy-900 text-white hover:bg-navy-800;
   }
   .btn-secondary {
     @apply btn border border-slate-300 bg-white text-navy-800 hover:bg-slate-50;
@@ -40,7 +45,7 @@
     @apply mb-1 block text-sm font-medium text-slate-700;
   }
   .page-title {
-    @apply text-2xl font-bold tracking-tight text-navy-900;
+    @apply font-display text-2xl font-bold tracking-tight text-navy-900;
   }
   .fade-in {
     animation: fadeIn 180ms ease-out;

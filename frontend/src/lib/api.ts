@@ -41,7 +41,7 @@ export function describeError(err: unknown): string {
   if (err instanceof ApiError) {
     const msg = detailMessage(err.body);
     if (msg) return msg;
-    if (err.status === 0) return "Cannot reach the NVB service. Check your connection and try again.";
+    if (err.status === 0) return "Cannot reach the R&D bank service. Check your connection and try again.";
     if (err.status === 429) return "Too many requests. Please wait a moment and try again.";
     if (err.status >= 500) return "The service is temporarily unavailable. Please try again.";
     return `Request failed (HTTP ${err.status}).`;

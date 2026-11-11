@@ -121,7 +121,7 @@ def _history(rng: random.Random, kind: str, start: date, end: date, opening: int
              employer: str) -> list[dict]:
     """Build a chronologically consistent history; never lets the balance go negative."""
     events: list[tuple[datetime, str, str, str, int, str, str]] = []
-    events.append((_at(start, rng), "credit", "deposit", "Deposits", opening, "Account opening deposit", "NVB Branch"))
+    events.append((_at(start, rng), "credit", "deposit", "Deposits", opening, "Account opening deposit", "R&D bank Branch"))
     day = start + timedelta(days=1)
     while day <= end:
         if kind == "current":
@@ -139,7 +139,7 @@ def _history(rng: random.Random, kind: str, start: date, end: date, opening: int
                                f"Card purchase - {merchant}", merchant))
             if rng.random() < 0.05:
                 events.append((_at(day, rng), "debit", "atm_withdrawal", "Cash", rng.choice([50_000, 100_000, 200_000]),
-                               "ATM withdrawal", "NVB ATM"))
+                               "ATM withdrawal", "R&D bank ATM"))
         elif kind == "savings":
             if day.day == 1 and rng.random() < 0.7:
                 events.append((_at(day, rng), "credit", "deposit", "Savings", rng.randint(100_000, 500_000),

@@ -62,6 +62,9 @@ export default function Layout() {
           </NavLink>
         ))}
       </nav>
+      <div className="px-5 pb-5">
+        <img src="/gbg-logo-white.png" alt="Global Brands Group" className="h-auto w-36" />
+      </div>
       <div className="border-t border-white/10 px-5 py-4 text-xs text-navy-200">
         <p className="font-semibold text-white">{user.full_name ?? user.display_name}</p>
         <p className="mt-0.5 capitalize">{user.role === "customer" ? `Customer · ${user.customer_number}` : user.role === "admin" ? "Administrator" : "Demo operator"}</p>
@@ -98,11 +101,7 @@ export default function Layout() {
               <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
             </svg>
           </button>
-          <div className="lg:hidden">
-            <span className="text-base font-black text-navy-900">
-              NV<span className="text-teal-600">B</span>
-            </span>
-          </div>
+          <img src="/rdbank-mark.svg" alt="" aria-hidden="true" className="h-8 w-8 shrink-0" />
           <DemoLabel className="hidden sm:inline-flex" />
           <div className="ml-auto flex items-center gap-3">
             <span className="hidden text-sm text-slate-600 md:inline">
@@ -134,7 +133,7 @@ export default function Layout() {
           </div>
         </main>
         <footer className="border-t border-slate-200 px-6 py-4 text-center text-xs text-slate-500">
-          Nova Valley Bank is a fictitious bank for a modernization demo. All data is synthetic. Not a real financial service.
+          R&amp;D bank is a fictitious bank for a modernization demo. All data is synthetic. Not a real financial service.
         </footer>
       </div>
     </div>

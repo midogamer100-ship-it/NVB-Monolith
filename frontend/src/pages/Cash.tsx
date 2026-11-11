@@ -238,7 +238,7 @@ export default function Cash() {
         <div className="card p-6">
           <h2 className="text-lg font-semibold text-navy-900">Confirm your {mode === "deposit" ? "deposit" : "withdrawal"}</h2>
           <p className="mt-1 text-sm text-slate-600">Please check the details. Nothing changes until you confirm.</p>
-          <div className={`mt-5 rounded-xl p-5 text-center ${mode === "deposit" ? "bg-teal-50" : "bg-navy-50"}`}>
+          <div className={`mt-5 rounded-xl p-5 text-center ${mode === "deposit" ? "bg-emerald-50" : "bg-navy-50"}`}>
             <p className="text-sm text-navy-700">You are {mode === "deposit" ? "depositing" : "withdrawing"}</p>
             <p className="text-4xl font-bold tabular-nums text-navy-900">{formatMinor(amountMinor)}</p>
           </div>
@@ -247,7 +247,7 @@ export default function Cash() {
             <Row k="Current balance" v={formatMinor(account.balance_minor)} />
             <Row k="Balance after" v={balanceAfter !== null ? formatMinor(balanceAfter) : "—"} />
             <Row k="Description" v={description.trim() || (mode === "deposit" ? "Cash deposit" : "Cash withdrawal")} />
-            <Row k="Channel" v="NVB Branch (demo)" />
+            <Row k="Channel" v="R&amp;D bank Branch (demo)" />
           </dl>
           {error && (
             <div className="mt-4">
@@ -275,16 +275,16 @@ export default function Cash() {
 
       {step === "receipt" && receipt && (
         <div className="card overflow-hidden">
-          <div className={`px-6 py-6 text-center ${receipt.status === "completed" ? "bg-teal-50" : "bg-red-50"}`}>
+          <div className={`px-6 py-6 text-center ${receipt.status === "completed" ? "bg-emerald-50" : "bg-red-50"}`}>
             <div
-              className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full ${receipt.status === "completed" ? "bg-teal-600" : "bg-red-600"} text-white`}
+              className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full ${receipt.status === "completed" ? "bg-emerald-600" : "bg-red-600"} text-white`}
               aria-hidden="true"
             >
               <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5">
                 {receipt.status === "completed" ? <path d="M5 12l5 5L20 7" strokeLinecap="round" strokeLinejoin="round" /> : <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />}
               </svg>
             </div>
-            <h2 className={`mt-3 text-xl font-bold ${receipt.status === "completed" ? "text-teal-900" : "text-red-800"}`}>
+            <h2 className={`mt-3 text-xl font-bold ${receipt.status === "completed" ? "text-emerald-900" : "text-red-800"}`}>
               {receipt.status === "completed" ? copy.done : copy.failed}
             </h2>
             {receipt.status !== "completed" && <p className="mt-1 text-sm text-red-800">{receipt.message ?? "No money was moved."}</p>}
