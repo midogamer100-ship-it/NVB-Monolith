@@ -1,0 +1,39 @@
+name: Read-only LAN runner probe
+
+on:
+  push:
+    branches: [feature/safe-core-ci]
+    paths: [.github/workflows/runner-probe.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nvb-internal-build
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    environment: nvb-ci-build
+    runs-on: [self-hosted, Linux, X64, nvb-lan]
+    timeout-minutes: 5
+    steps:
+      - name: Read-only runner check
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "===== RUNNER IDENTITY ====="
+          id
+          echo "===== AVAILABLE TOOLS ====="
+          for tool in oc python3 git podman; do
+            command -v "$tool"
+          done
+          echo "===== FILE ACCESS: CONTENTS NOT READ ====="
+          for path in "$HOME/.kube/config" /etc/nvb-deploy/migration.env /home/ghrunner/.ssh/nvb_vm_key; do
+            if [ -r "$path" ]; then
+              printf 'READABLE: %s\n' "$path"
+            else
+              printf 'NOT READABLE: %s\n' "$path"
+            fi
+          done
+          echo "No build or deployment performed."
