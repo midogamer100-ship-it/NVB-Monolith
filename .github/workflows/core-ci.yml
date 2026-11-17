@@ -1,0 +1,44 @@
+name: Core CI and VM candidate
+on:
+  pull_request:
+  push:
+    branches: [main, 'feature/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: core-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify-and-package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install isolated test dependencies
+        run: python -m pip install -r backend/requirements-dev.txt
+      - name: Focused tests using temporary SQLite only
+        run: python scripts/ci/local_tests.py
+      - name: Build banking frontend
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - name: Package code-only VM candidate
+        run: python scripts/ci/package_vm.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: core-vm-candidate-${{ github.sha }}
+          path: dist/core-vm-*
+          if-no-files-found: error
+          retention-days: 14

@@ -1,26 +1,12 @@
-name: Deploy NVB
+name: Legacy VM deployment retired
 
+# The old v* tag deployment is intentionally removed. This workflow cannot deploy.
 on:
-  push:
-    tags: ['v*']
-
-concurrency:
-  group: nvb-deploy
-  cancel-in-progress: false
-
+  workflow_dispatch:
+permissions: {}
 jobs:
-  deploy:
-    runs-on: [self-hosted, nvb-lan]
-    timeout-minutes: 90
+  retired:
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Find running pool VMs
-        run: bash ./deploy/autoscale/build-inventory.sh "$RUNNER_TEMP/inventory.ini"
-
-      - name: Rolling deploy
-        env:
-          ANSIBLE_CONFIG: ${{ github.workspace }}/deploy/autoscale/ansible.cfg
-        run: |
-          set -a; . /etc/nvb-deploy/migration.env; set +a
-          ansible-playbook -i "$RUNNER_TEMP/inventory.ini" deploy/autoscale/deploy.yml -e "release_tag=${GITHUB_REF_NAME}"
+      - run: |
+          echo "Legacy tag deployment is retired. No VM or database action was performed."
