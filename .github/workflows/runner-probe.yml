@@ -22,11 +22,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
           echo "===== RUNNER IDENTITY ====="
           id
           echo "===== AVAILABLE TOOLS ====="
           for tool in oc python3 git podman; do
-            command -v "$tool"
+            if command -v "$tool"; then
+              :
+            else
+              printf 'MISSING OR NOT EXECUTABLE: %s\n' "$tool"
+            fi
           done
           echo "===== FILE ACCESS: CONTENTS NOT READ ====="
           for path in "$HOME/.kube/config" /etc/nvb-deploy/migration.env /home/ghrunner/.ssh/nvb_vm_key; do
