@@ -1,0 +1,17 @@
+{
+  "schema_version": 2,
+  "purpose": "test-candidate-build",
+  "release_id": "test-20261117T204137Z",
+  "sources": {
+    "core": {
+      "repository": "midogamer100-ship-it/NVB-Monolith",
+      "revision": "0d21afeb3e47904434fd5e4611adfbf743c654d0",
+      "ci_run_id": "44165350050"
+    },
+    "digital": {
+      "repository": "midogamer100-ship-it/nvb-digital-services-handover",
+      "revision": "d87c9541ea56ded0c2c8d37c64693bb264e975f2",
+      "ci_run_id": "44082580711"
+    }
+  }
+}
