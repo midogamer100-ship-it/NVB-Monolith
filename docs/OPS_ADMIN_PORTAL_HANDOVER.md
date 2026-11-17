@@ -8,7 +8,7 @@ database was changed. No merge and no tag.
 | Repo | Branch | Base |
 | --- | --- | --- |
 | NVB-Monolith (this repo) | `feature/ops-admin-portal` | `feature/unified-banking-ui` @ `98effa30b9842726e8e3abe3155302b2feb36c9d` |
-| nvb-digital-services-handover | `feature/ops-admin-loan-review` | `feature/unified-bank-gateway` @ `bde29bb5cf02b0150287a1df83617df7a6b40a5` |
+| nvb-digital-services-handover | `feature/ops-admin-loan-review` | `feature/unified-bank-gateway` @ `bde29bbb1cf02b0150287a1df83617df7a6b40a5` |
 
 The two branches belong together: this UI calls the new Loans/Statements endpoints of the
 digital branch. Role model, authorization and transition: `docs/OPS_ADMIN_ROLE_MODEL.md` in the
