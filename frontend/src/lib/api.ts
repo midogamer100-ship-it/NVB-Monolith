@@ -120,7 +120,8 @@ export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T
     try {
       body = JSON.parse(text);
     } catch {
-      body = { detail: text.slice(0, 200) };
+      // Non-JSON bodies (e.g. a proxy's HTML error page) are never shown to the user.
+      body = null;
     }
   }
 

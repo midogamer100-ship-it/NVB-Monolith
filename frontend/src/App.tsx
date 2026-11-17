@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Link, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { homePathFor, useAuth } from "./auth/AuthContext";
 import Layout from "./components/Layout";
 import { EmptyState, LoadingBlock } from "./components/ui";
@@ -11,13 +11,19 @@ import Dashboard from "./pages/Dashboard";
 import DemoWorkload from "./pages/DemoWorkload";
 import ForgotPassword from "./pages/ForgotPassword";
 import Login from "./pages/Login";
-import Operations from "./pages/Operations";
 import Profile from "./pages/Profile";
 import Register from "./pages/Register";
 import ResetPassword from "./pages/ResetPassword";
 import Transactions from "./pages/Transactions";
 import Transfer from "./pages/Transfer";
-import { StatementsPage, LoansPage, LoanReviewPage } from "./pages/DigitalServices";
+import { StatementsPage, LoansPage } from "./pages/DigitalServices";
+import { AdminAccessProvider } from "./pages/admin/access";
+import AdminOverview from "./pages/admin/Overview";
+import AdminProfile from "./pages/admin/AdminProfile";
+import CustomerSupport from "./pages/admin/CustomerSupport";
+import LoanDetail from "./pages/admin/LoanDetail";
+import LoanQueue from "./pages/admin/LoanQueue";
+import StatementOps from "./pages/admin/StatementOps";
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { status } = useAuth();
@@ -53,6 +59,28 @@ function RequireRole({ role, children }: { role: Role; children: ReactNode }) {
     );
   }
   return <>{children}</>;
+}
+
+/**
+ * Admin workspace guard: non-admins are sent to their own home page (no admin UI is rendered).
+ * Navigation only; the Core and extension APIs enforce authorization server-side.
+ */
+function AdminOnly() {
+  const { session } = useAuth();
+  if (!session) return null;
+  if (session.user.role !== "admin") return <Navigate to={homePathFor(session.user.role)} replace />;
+  return (
+    <AdminAccessProvider>
+      <Outlet />
+    </AdminAccessProvider>
+  );
+}
+
+/** Retired admin/reviewer URLs: admins go to the new workspace, others to their home. */
+function LegacyAdminRedirect() {
+  const { session } = useAuth();
+  if (!session) return null;
+  return <Navigate to={session.user.role === "admin" ? "/admin" : homePathFor(session.user.role)} replace />;
 }
 
 function Home() {
@@ -101,8 +129,17 @@ export default function App() {
         <Route path="/profile" element={<RequireRole role="customer"><Profile /></RequireRole>} />
         <Route path="/statements" element={<RequireRole role="customer"><StatementsPage /></RequireRole>} />
         <Route path="/loans" element={<RequireRole role="customer"><LoansPage /></RequireRole>} />
-        <Route path="/loan-review" element={<LoanReviewPage />} />
-        <Route path="/operations" element={<RequireRole role="admin"><Operations /></RequireRole>} />
+        <Route path="/loan-review" element={<LegacyAdminRedirect />} />
+        <Route path="/operations" element={<LegacyAdminRedirect />} />
+        <Route path="/admin" element={<AdminOnly />}>
+          <Route index element={<AdminOverview />} />
+          <Route path="loans" element={<LoanQueue />} />
+          <Route path="loans/:id" element={<LoanDetail />} />
+          <Route path="statements" element={<StatementOps />} />
+          <Route path="customers" element={<CustomerSupport />} />
+          <Route path="profile" element={<AdminProfile />} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
         <Route path="/demo-workload" element={<RequireRole role="demo"><DemoWorkload /></RequireRole>} />
         <Route path="*" element={<NotFound />} />
       </Route>

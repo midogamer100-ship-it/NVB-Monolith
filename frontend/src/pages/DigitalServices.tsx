@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
 import { api, ApiError, describeError, newIdempotencyKey } from "../lib/api";
-import { LOANS, STATEMENTS, minorUnits, money, useDigitalAccess } from "../lib/digital";
+import { LOANS, STATEMENTS, minorUnits, money } from "../lib/digital";
 
 interface Account { account_id: number; masked_number: string; currency: string; nickname?: string }
 interface Statement { id: string; status: string; period: { label: string }; account: { masked_number: string }; error_code?: string | null }
@@ -100,63 +99,4 @@ export function LoansPage() {
     </form><ErrorMessage message={error || accountError}/>{notice && <p role="status" className="text-sm text-teal-800">{notice}</p>}</Box>
     <Box><h2 className="text-lg font-semibold">My applications</h2><ErrorMessage message={list.error}/>{list.loading ? <p>Loading applications…</p> : !list.items.length ? <p className="text-slate-500">No applications yet.</p> : list.items.map(item => <article key={item.id} className="space-y-3 rounded-lg border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><strong>{money(item.amount_minor, item.currency)} · {item.term_months} months</strong><Status value={item.status}/></div><p className="text-sm text-slate-600">{item.account.masked_number} · {item.purpose}</p>{item.decision_reason && <p>Decision reason: {item.decision_reason}</p>}{item.status === "draft" && <button className="btn-primary" disabled={busy} onClick={() => void submit(item)}>Submit application</button>}</article>)}</Box>
   </div>;
-}
-
-export function LoanReviewPage() {
-  const access = useDigitalAccess();
-  const held = access.identity?.extension_roles ?? [];
-  const allowed = held.some(role => ["reviewer", "approver", "extension_admin"].includes(role));
-  if (access.loading) return <Box>Checking review access…</Box>;
-  if (access.unavailable) return <Box><ErrorMessage message="Cannot verify Loans permissions. Please reload when the service is available."/></Box>;
-  if (!allowed || !access.identity) return <Box><h1 className="text-xl font-semibold">Review access required</h1><p>Your identity has no loan review role.</p><Link to="/">Return to banking</Link></Box>;
-  return <ReviewWorkspace subject={access.identity.subject} roles={held}/>;
-}
-
-function ReviewWorkspace({ subject, roles }: { subject: string; roles: string[] }) {
-  const management = roles.some(role => ["approver", "extension_admin"].includes(role));
-  const [filter, setFilter] = useState("");
-  const list = useList<Loan>(`${LOANS}/review/applications${filter ? `?status=${encodeURIComponent(filter)}` : ""}`);
-  const [selected, setSelected] = useState<Loan | null>(null);
-  const [reviewers, setReviewers] = useState<{ subject: string; label: string }[]>([]);
-  const [reviewer, setReviewer] = useState(""); const [reason, setReason] = useState("");
-  const [choice, setChoice] = useState("approve"); const [busy, setBusy] = useState(false); const [error, setError] = useState("");
-  const selection = useRef<string | null>(null);
-  useEffect(() => {
-    if (!management) return;
-    const controller = new AbortController();
-    api<{ items: { subject: string; label: string }[] }>(`${LOANS}/review/reviewers`, { signal: controller.signal }).then(data => { if (!controller.signal.aborted) setReviewers(data.items); }, e => { if (!controller.signal.aborted) setError(errorText(e)); });
-    return () => controller.abort();
-  }, [management]);
-  useEffect(() => () => { selection.current = null; }, []);
-  async function open(id: string) {
-    selection.current = id; setSelected(null); setReason(""); setReviewer(""); setError("");
-    try { const item = await api<Loan>(`${LOANS}/review/applications/${id}`); if (selection.current === id) setSelected(item); } catch (e) { if (selection.current === id) setError(errorText(e)); }
-  }
-  async function act(action: "assign" | "recommendation" | "decision") {
-    if (!selected) return;
-    if (action !== "assign" && reason.trim().length < 10) { setError("Please provide a reason of at least 10 characters."); return; }
-    setBusy(true); setError("");
-    const body = action === "assign" ? { version: selected.version, reviewer_subject: reviewer }
-      : action === "recommendation" ? { version: selected.version, recommendation: choice, reason: reason.trim() }
-      : { version: selected.version, decision: choice === "approve" ? "approved" : "rejected", reason: reason.trim() };
-    try { await api(`${LOANS}/review/applications/${selected.id}/${action}`, { method: "POST", body }); await open(selected.id); list.refresh(); }
-    catch (e) { setError(errorText(e)); list.refresh(); } finally { setBusy(false); }
-  }
-  const canRecommend = !!selected && selected.status === "under_review" && roles.includes("reviewer") && selected.reviewer_subject === subject && selected.owner_subject !== subject;
-  const canDecide = !!selected && selected.status === "under_review" && !!selected.recommendation && roles.includes("approver") && subject !== selected.owner_subject && subject !== selected.reviewer_subject;
-  return <div className="space-y-6"><h1 className="text-2xl font-bold text-navy-900">{management ? "Loan management & decisions" : "Assigned loan reviews"}</h1>
-    <Box><div className="flex flex-wrap items-center justify-between gap-3"><label>Status <select className="input" value={filter} onChange={e => setFilter(e.target.value)}><option value="">All reviewable applications</option>{["submitted", "under_review", "approved", "rejected"].map(value => <option key={value} value={value}>{value.replace(/_/g, " ")}</option>)}</select></label><button className="btn-secondary" onClick={list.refresh}>Refresh queue</button></div><p className="text-xs text-slate-500">Most recent applications, up to 200. Reviewers see only their assigned requests.</p><ErrorMessage message={list.error}/>{list.loading ? <p>Loading queue…</p> : !list.items.length ? <p>No applications in this view.</p> : list.items.map(item => <button key={item.id} disabled={busy} onClick={() => void open(item.id)} className="flex w-full flex-wrap items-center justify-between gap-3 rounded-lg border p-4 text-left hover:bg-slate-50"><span><strong>{item.owner_label || "Applicant"}</strong> · {money(item.amount_minor, item.currency)}<span className="block text-xs text-slate-500">{item.account.masked_number}</span></span><Status value={item.status}/></button>)}</Box>
-    <ErrorMessage message={error}/>{selected && <Box><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Application details</h2><button className="btn-secondary" disabled={busy} onClick={() => void open(selected.id)}>Reload details</button></div><dl className="grid gap-3 text-sm sm:grid-cols-2"><div><dt className="text-slate-500">Applicant</dt><dd>{selected.owner_label}</dd></div><div><dt className="text-slate-500">Amount / term</dt><dd>{money(selected.amount_minor, selected.currency)} / {selected.term_months} months</dd></div><div><dt className="text-slate-500">Declared monthly income</dt><dd>{money(selected.monthly_income_minor, selected.currency)}</dd></div><div><dt className="text-slate-500">Purpose</dt><dd>{selected.purpose || "—"}</dd></div></dl>
-      <div className="rounded-lg bg-slate-50 p-4"><h3 className="font-semibold">Background summary</h3><p className="text-sm">{selected.summary?.status ?? "No summary available"}</p>{selected.summary?.error_code && <ErrorMessage message={selected.summary.error_code}/>}<p className="mt-2 text-xs text-amber-800">Synthetic demo summary; not a credit decision.</p>{selected.summary?.result && <SummaryDetails result={selected.summary.result} currency={selected.currency}/>}</div>
-      {selected.recommendation && <p className="text-sm">Reviewer recommendation: <strong>{selected.recommendation}</strong> — {selected.recommendation_reason}</p>}{selected.decision_reason && <p className="text-sm">Final decision: <strong>{selected.status}</strong> — {selected.decision_reason}</p>}
-      {management && ["submitted", "under_review"].includes(selected.status) && !selected.recommendation && <form className="flex flex-wrap gap-3" onSubmit={e => { e.preventDefault(); void act("assign"); }}><label>Assign reviewer<select className="input ml-2" required value={reviewer} onChange={e => setReviewer(e.target.value)}><option value="">Select reviewer</option>{reviewers.filter(r => r.subject !== selected.owner_subject).map(r => <option key={r.subject} value={r.subject}>{r.label || r.subject}</option>)}</select></label><button className="btn-secondary" disabled={busy || !reviewer}>Assign</button></form>}
-      {(canRecommend || canDecide) && <form className="space-y-3 border-t pt-4" onSubmit={e => { e.preventDefault(); void act(canDecide ? "decision" : "recommendation"); }}><h3 className="font-semibold">{canDecide ? "Final decision" : "Reviewer recommendation"}</h3><select aria-label="Recommendation or decision" className="input" value={choice} onChange={e => setChoice(e.target.value)}><option value="approve">Approve</option><option value="reject">Reject</option></select><label className="block text-sm">Reason<textarea className="input mt-1 w-full" minLength={10} maxLength={500} required value={reason} onChange={e => setReason(e.target.value)}/></label><button className="btn-primary" disabled={busy}>{canDecide ? "Record final decision" : "Save recommendation"}</button><p className="text-xs text-slate-500">Workflow decision only. No money is disbursed.</p></form>}
-      <h3 className="font-semibold">Application history</h3><ol className="space-y-2 text-sm">{selected.events?.map((event, i) => <li key={i}>{event.type.replace(/_/g, " ")} · {event.actor} · {new Date(event.at).toLocaleString()}</li>)}</ol>
-    </Box>}
-  </div>;
-}
-
-function SummaryDetails({ result, currency }: { result: Record<string, unknown>; currency: string }) {
-  const labels: Record<string, string> = { installment_minor: "Monthly instalment (no interest)", average_monthly_credits_minor: "Average monthly credits", average_monthly_debits_minor: "Average monthly debits", disposable_income_minor: "Disposable income" };
-  return <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">{Object.entries(labels).map(([key, label]) => typeof result[key] === "number" ? <div key={key}><dt className="text-slate-500">{label}</dt><dd>{money(result[key] as number, currency)}</dd></div> : null)}</dl>;
 }
