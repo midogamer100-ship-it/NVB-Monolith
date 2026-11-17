@@ -1,0 +1,35 @@
+name: Approved deployment to digital test only
+
+on:
+  push:
+    branches: [feature/safe-core-ci]
+    paths: [.github/workflows/test-cd-deploy.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nvb-internal-build
+  cancel-in-progress: false
+
+jobs:
+  test-deploy:
+    if: github.repository == 'midogamer100-ship-it/NVB-Monolith' && github.ref == 'refs/heads/feature/safe-core-ci'
+    environment: nvb-ci-test
+    runs-on: [self-hosted, Linux, X64, nvb-lan]
+    timeout-minutes: 180
+    steps:
+      - name: Deploy fixed candidates with guarded image rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
+          /usr/bin/python3 /usr/local/libexec/nvb-ci/test-cd.py --mode deploy
+      - name: Save test deployment metadata only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: test-cd-result-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/test-cd-result.json
+          if-no-files-found: warn
+          retention-days: 30
