@@ -36,9 +36,20 @@ jobs:
           npm run build
       - name: Package code-only VM candidate
         run: python scripts/ci/package_vm.py
-      - uses: actions/upload-artifact@v4
+      - name: Package offline VM runtime from tested dependency versions
+        run: python scripts/ci/package_runtime.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: core-vm-candidate-${{ github.sha }}
           path: dist/core-vm-*
           if-no-files-found: error
           retention-days: 14
+          overwrite: true
+      - name: Save offline VM runtime
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: core-vm-runtime-${{ github.sha }}
+          path: dist/vm-runtime/*
+          if-no-files-found: error
+          retention-days: 14
+          overwrite: true
