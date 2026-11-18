@@ -1,0 +1,33 @@
+name: Approved production Golden v4 canary
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+concurrency:
+  group: nvb-production-control
+  cancel-in-progress: false
+jobs:
+  execute:
+    if: github.repository == 'midogamer100-ship-it/NVB-Monolith' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    environment: nvb-production
+    runs-on: [self-hosted, Linux, X64, nvb-lan]
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Execute fixed approved canary operation through root broker
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
+          /usr/bin/python3 -I /usr/local/libexec/nvb-ci/production-client.py --mode canary
+      - name: Save production execution report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: nvb-production-canary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/nvb-production-result.json
+          if-no-files-found: warn
+          retention-days: 30
