@@ -10,6 +10,8 @@ interface NavItem {
   icon: ReactNode;
   roles: Role[];
   requiresWorkload?: boolean;
+  /** Match the path exactly (overview must not stay active on sub-pages). */
+  end?: boolean;
 }
 
 const icon = (d: string) => (
@@ -25,7 +27,13 @@ const NAV: NavItem[] = [
   { to: "/cash", label: "Deposit & withdraw", roles: ["customer"], icon: icon("M3 7h18v10H3zM12 9.5v5M9.5 12h5M6 7V5h12v2") },
   { to: "/transactions", label: "Transactions", roles: ["customer"], icon: icon("M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01") },
   { to: "/profile", label: "Profile", roles: ["customer"], icon: icon("M12 12a4 4 0 100-8 4 4 0 000 8zM4 20a8 8 0 0116 0") },
-  { to: "/operations", label: "Operations", roles: ["admin"], icon: icon("M4 19V9M10 19V5M16 19v-7M22 19H2") },
+  { to: "/statements", label: "Account statements", roles: ["customer"], icon: icon("M6 3h9l3 3v15H6zM9 10h6M9 14h6M9 18h4") },
+  { to: "/loans", label: "Loan applications", roles: ["customer"], icon: icon("M6 3h12v18H6zM9 8h6M9 12h6M9 16h3") },
+  { to: "/admin", label: "Admin overview", roles: ["admin"], end: true, icon: icon("M4 19V9M10 19V5M16 19v-7M22 19H2") },
+  { to: "/admin/loans", label: "Loan management", roles: ["admin"], icon: icon("M5 3h14v18H5zM8 8h8M8 12l2 2 5-5M8 18h8") },
+  { to: "/admin/statements", label: "Statement operations", roles: ["admin"], icon: icon("M6 3h9l3 3v15H6zM9 10h6M9 14h6M9 18h4") },
+  { to: "/admin/customers", label: "Customer support", roles: ["admin"], icon: icon("M16 11a3 3 0 100-6 3 3 0 000 6zM8 11a3 3 0 100-6 3 3 0 000 6zM2 20a6 6 0 0112 0M14 14.5A6 6 0 0122 20") },
+  { to: "/admin/profile", label: "Profile", roles: ["admin"], icon: icon("M12 12a4 4 0 100-8 4 4 0 000 8zM4 20a8 8 0 0116 0") },
   { to: "/demo-workload", label: "Demo workload", roles: ["demo"], requiresWorkload: true, icon: icon("M13 2L4 14h7l-1 8 9-12h-7z") },
 ];
 
@@ -40,6 +48,14 @@ export default function Layout() {
   if (!session) return null;
   const { user, features } = session;
   const items = NAV.filter((n) => n.roles.includes(user.role) && (!n.requiresWorkload || features.demo_workload));
+  const signOut = async () => {
+    setSigningOut(true);
+    try {
+      await logout();
+    } finally {
+      setSigningOut(false);
+    }
+  };
 
   const sidebar = (
     <div className="flex h-full flex-col bg-navy-900 text-navy-100">
@@ -51,6 +67,7 @@ export default function Layout() {
           <NavLink
             key={item.to}
             to={item.to}
+            end={item.end}
             className={({ isActive }) =>
               `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                 isActive ? "bg-teal-600/20 text-white ring-1 ring-inset ring-teal-500/40" : "text-navy-100 hover:bg-white/5 hover:text-white"
@@ -61,13 +78,26 @@ export default function Layout() {
             {item.label}
           </NavLink>
         ))}
+        {user.role === "admin" && (
+          <button
+            type="button"
+            disabled={signingOut}
+            onClick={() => void signOut()}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-navy-100 transition-colors hover:bg-white/5 hover:text-white disabled:opacity-60"
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {signingOut ? "Signing out…" : "Sign out"}
+          </button>
+        )}
       </nav>
       <div className="px-5 pb-5">
         <img src="/gbg-logo-white.png" alt="Global Brands Group" className="h-auto w-36" />
       </div>
       <div className="border-t border-white/10 px-5 py-4 text-xs text-navy-200">
         <p className="font-semibold text-white">{user.full_name ?? user.display_name}</p>
-        <p className="mt-0.5 capitalize">{user.role === "customer" ? `Customer · ${user.customer_number}` : user.role === "admin" ? "Administrator" : "Demo operator"}</p>
+        <p className="mt-0.5 capitalize">{user.role === "customer" ? `Customer · ${user.customer_number}` : user.role === "admin" ? "Operations Admin" : "Demo operator"}</p>
         <p className="mt-3 leading-relaxed text-navy-300">Fictitious bank. Synthetic data. No real transactions.</p>
       </div>
     </div>
@@ -111,14 +141,7 @@ export default function Layout() {
               type="button"
               className="btn-secondary px-3 py-1.5"
               disabled={signingOut}
-              onClick={async () => {
-                setSigningOut(true);
-                try {
-                  await logout();
-                } finally {
-                  setSigningOut(false);
-                }
-              }}
+              onClick={() => void signOut()}
             >
               {signingOut ? "Signing out…" : "Sign out"}
             </button>
