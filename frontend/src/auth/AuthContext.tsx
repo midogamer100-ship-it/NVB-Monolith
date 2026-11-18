@@ -15,7 +15,7 @@ interface AuthValue {
 const AuthContext = createContext<AuthValue | null>(null);
 
 export function homePathFor(role: Role): string {
-  if (role === "admin") return "/operations";
+  if (role === "admin") return "/admin";
   if (role === "demo") return "/demo-workload";
   return "/dashboard";
 }

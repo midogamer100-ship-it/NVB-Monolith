@@ -44,7 +44,10 @@ def test_metrics_labels_use_route_templates_not_ids(customer_client):
     customer_client.get("/api/accounts/999999")
     r = customer_client.get("/metrics", headers={"Authorization": "Bearer test-metrics-token"})
     assert 'route="/api/accounts/{account_id}"' in r.text
-    assert "999999" not in r.text
+    # Check label values only: float sample values (e.g. duration sums) may contain "999999".
+    labels = [line[line.index("{"):line.index("}") + 1] for line in r.text.splitlines()
+              if not line.startswith("#") and "{" in line]
+    assert labels and not any("999999" in lbl for lbl in labels)
 
 
 def test_request_id_and_instance_headers(client):
