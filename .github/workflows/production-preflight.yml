@@ -1,0 +1,33 @@
+name: Approved production read-only preflight
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+concurrency:
+  group: nvb-production-control
+  cancel-in-progress: false
+jobs:
+  preflight:
+    if: github.repository == 'midogamer100-ship-it/NVB-Monolith' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    environment: nvb-production
+    runs-on: [self-hosted, Linux, X64, nvb-lan]
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Verify approved identity and observe production only
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
+          /usr/bin/python3 -I /usr/local/libexec/nvb-ci/production-preflight.py
+      - name: Save read-only observation report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: success()
+        with:
+          name: nvb-production-preflight-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/nvb-production-preflight.json
+          if-no-files-found: error
+          retention-days: 30
