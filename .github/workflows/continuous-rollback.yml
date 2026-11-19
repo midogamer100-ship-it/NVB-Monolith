@@ -1,0 +1,26 @@
+name: Continuous rollback
+# Manual only. Needs nvb-production approval. Returns production to the recorded
+# previous release, or recovers an interrupted operation to the last completed one.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+jobs:
+  rollback:
+    if: github.repository == 'midogamer100-ship-it/NVB-Monolith' && github.ref == 'refs/heads/main'
+    environment: nvb-production
+    concurrency:
+      group: nvb-production-control
+      cancel-in-progress: false
+    runs-on: [self-hosted, Linux, X64, nvb-lan]
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Roll back production (root broker)
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/python3 -I /usr/local/libexec/nvb-continuous/continuous_client.py --stage rollback
