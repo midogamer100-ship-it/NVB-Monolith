@@ -1,0 +1,55 @@
+name: Continuous release
+# prepare: build -> (Golden if Core changed) -> Test rollout + business checks.
+# deploy:  waits for nvb-production approval, then promotes ONLY the release this
+#          run prepared (root broker binds run_id -> release_id).
+on:
+  workflow_run:
+    workflows: ['Core CI and VM candidate']
+    types: [completed]
+    branches: [main]
+  schedule:
+    - cron: '*/30 * * * *'   # picks up Digital repo changes (cross-repo workflow_run is not possible)
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+jobs:
+  prepare:
+    if: >-
+      github.repository == 'midogamer100-ship-it/NVB-Monolith' && github.ref == 'refs/heads/main' &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    concurrency:
+      group: nvb-continuous-prepare
+      cancel-in-progress: false
+    runs-on: [self-hosted, Linux, X64, nvb-lan]
+    timeout-minutes: 120
+    outputs:
+      outcome: ${{ steps.prepare.outputs.outcome }}
+      release_id: ${{ steps.prepare.outputs.release_id }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Prepare and test the newest CI-passed main pair (root broker)
+        id: prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/python3 -I /usr/local/libexec/nvb-continuous/continuous_client.py --stage prepare
+  deploy:
+    needs: prepare
+    if: needs.prepare.outputs.outcome == 'awaiting-approval'
+    environment: nvb-production
+    concurrency:
+      group: nvb-production-control
+      cancel-in-progress: false
+    runs-on: [self-hosted, Linux, X64, nvb-lan]
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Promote ${{ needs.prepare.outputs.release_id }} to production (root broker)
+        shell: bash
+        run: |
+          set -euo pipefail
+          /usr/bin/python3 -I /usr/local/libexec/nvb-continuous/continuous_client.py --stage deploy
