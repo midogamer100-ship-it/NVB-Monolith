@@ -173,3 +173,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 def app_factory() -> FastAPI:
     """Entry point for uvicorn: ``uvicorn --factory app.main:app_factory``."""
     return create_app()
+
+# Continuous delivery phase-2 smoke marker (no behavior change).
